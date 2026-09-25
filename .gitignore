@@ -1,0 +1,29 @@
+## Build and intermediate output directories
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+## JetBrains / Rider
+.idea/
+*.sln.iml
+
+## VS Code
+.vscode/
+
+## Test / Coverage
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+## OS generated
+.DS_Store
+Thumbs.db

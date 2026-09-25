@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Bubox.Api/Bubox.Api.csproj" />
+  <Project Path="Bubox.Application/Bubox.Application.csproj" />
+  <Project Path="Bubox.Domain/Bubox.Domain.csproj" />
+  <Project Path="Bubox.Infrastructure/Bubox.Infrastructure.csproj" />
+</Solution>

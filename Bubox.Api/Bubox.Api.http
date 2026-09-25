@@ -1,0 +1,6 @@
+@Bubox.Api_HostAddress = http://localhost:5073
+
+GET {{Bubox.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,19 @@
+Logging:
+  LogLevel:
+    Default: Information
+    Microsoft.AspNetCore: Warning
+
+AllowedHosts: "*"
+
+ConnectionStrings:
+  DefaultConnection: "Host=localhost;Port=5432;Database=bubox_db;Username=postgres;Password=postgres;"
+
+Jwt:
+  Key: "SuperSecretKeyForBuboxPlatformAuthentication2026!MustBe32CharsLong"
+  Issuer: "Bubox.Api"
+  Audience: "Bubox.Client"
+  ExpiryMinutes: 1440
+
+Menu:
+  MaxImageSizeMB: 1
+  MaxImageSizeBytes: 1048576
