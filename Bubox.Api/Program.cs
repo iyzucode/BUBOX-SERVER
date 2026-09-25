@@ -10,7 +10,10 @@ using Microsoft.OpenApi;
 var builder = WebApplication.CreateBuilder(args);
 
 // Load YAML Configuration (replaces appsettings.json)
-builder.Configuration.AddYamlFile("configuration.yml", optional: false, reloadOnChange: true);
+builder.Configuration
+    .AddYamlFile("configuration.yml", optional: true, reloadOnChange: true)
+    .AddYamlFile($"configuration.{builder.Environment.EnvironmentName}.yml", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
 
 // Add Controllers
 builder.Services.AddControllers();
@@ -113,7 +116,10 @@ if (app.Environment.IsDevelopment())
     app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 }
 
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 // Map Controllers
 app.MapControllers();
