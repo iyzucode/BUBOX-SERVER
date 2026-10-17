@@ -1,8 +1,6 @@
 using Bubox.Application.DTOs.Menu;
 using Bubox.Application.Exceptions;
 using Bubox.Application.Interfaces;
-using Bubox.Domain.Constants;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bubox.Api.Controllers;
@@ -11,6 +9,10 @@ namespace Bubox.Api.Controllers;
 [Route("api/[controller]")]
 public class MenuController(IMenuService menuService) : ControllerBase
 {
+    // ==========================================
+    // 1. JADWAL MINGGUAN & HARIAN (PUBLIK & PEMESANAN)
+    // ==========================================
+
     [HttpGet("GetWeeklyMenu")]
     public async Task<IActionResult> GetWeeklyMenu()
     {
@@ -37,31 +39,45 @@ public class MenuController(IMenuService menuService) : ControllerBase
         }
     }
 
-    [HttpGet("GetDetailMenu")]
-    public async Task<IActionResult> GetDetailMenu([FromQuery] Guid id)
+    // ==========================================
+    // 2. KATALOG MASTER MENU (ADMIN)
+    // ==========================================
+
+    [HttpGet("GetMasterMenus")]
+    public async Task<IActionResult> GetMasterMenus(
+        [FromQuery] Guid? categoryId,
+        [FromQuery] string? search,
+        [FromQuery] bool includeInactive = false
+    )
+    {
+        var result = await menuService.GetMasterMenusAsync(categoryId, search, includeInactive);
+        return Ok(result);
+    }
+
+    [HttpGet("GetDetailMasterMenu")]
+    public async Task<IActionResult> GetDetailMasterMenu([FromQuery] Guid id)
     {
         if (id == Guid.Empty)
         {
-            return BadRequest(new { message = "Parameter 'id' menu wajib disertakan." });
+            return BadRequest(new { message = "Parameter 'id' master menu wajib disertakan." });
         }
 
-        var menu = await menuService.GetMenuByIdAsync(id);
+        var menu = await menuService.GetMasterMenuByIdAsync(id);
         if (menu == null)
         {
-            return NotFound(new { message = "Menu tidak ditemukan." });
+            return NotFound(new { message = "Master menu tidak ditemukan." });
         }
 
         return Ok(menu);
     }
 
-    // [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.SuperAdmin}")] // Dinonaktifkan sementara untuk masa development
-    [HttpPost("CreateMenu")]
-    public async Task<IActionResult> CreateMenu([FromBody] CreateMenuRequest request)
+    [HttpPost("CreateMasterMenu")]
+    public async Task<IActionResult> CreateMasterMenu([FromBody] CreateMasterMenuRequest request)
     {
         try
         {
-            var menuId = await menuService.CreateMenuAsync(request);
-            return Ok(new { id = menuId, message = "Menu berhasil ditambahkan." });
+            var menuId = await menuService.CreateMasterMenuAsync(request);
+            return Ok(new { id = menuId, message = "Master menu berhasil ditambahkan ke katalog." });
         }
         catch (InvalidMenuDataException ex)
         {
@@ -69,23 +85,22 @@ public class MenuController(IMenuService menuService) : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Terjadi kesalahan internal saat membuat menu.", detail = ex.Message });
+            return StatusCode(500, new { message = "Terjadi kesalahan internal saat membuat master menu.", detail = ex.Message });
         }
     }
 
-    // [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.SuperAdmin}")] // Dinonaktifkan sementara untuk masa development
-    [HttpPut("UpdateMenu")]
-    public async Task<IActionResult> UpdateMenu([FromQuery] Guid id, [FromBody] UpdateMenuRequest request)
+    [HttpPut("UpdateMasterMenu")]
+    public async Task<IActionResult> UpdateMasterMenu([FromQuery] Guid id, [FromBody] UpdateMasterMenuRequest request)
     {
         if (id == Guid.Empty)
         {
-            return BadRequest(new { message = "Parameter 'id' menu wajib disertakan." });
+            return BadRequest(new { message = "Parameter 'id' master menu wajib disertakan." });
         }
 
         try
         {
-            await menuService.UpdateMenuAsync(id, request);
-            return Ok(new { id, message = "Menu berhasil diperbarui." });
+            await menuService.UpdateMasterMenuAsync(id, request);
+            return Ok(new { id, message = "Master menu berhasil diperbarui." });
         }
         catch (MenuNotFoundException ex)
         {
@@ -97,41 +112,43 @@ public class MenuController(IMenuService menuService) : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Terjadi kesalahan internal saat memperbarui menu.", detail = ex.Message });
+            return StatusCode(500, new { message = "Terjadi kesalahan internal saat memperbarui master menu.", detail = ex.Message });
         }
     }
 
-    // [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.SuperAdmin}")] // Dinonaktifkan sementara untuk masa development
-    [HttpDelete("DeleteMenu")]
-    public async Task<IActionResult> DeleteMenu([FromQuery] Guid id)
+    [HttpDelete("DeleteMasterMenu")]
+    public async Task<IActionResult> DeleteMasterMenu([FromQuery] Guid id)
     {
         if (id == Guid.Empty)
         {
-            return BadRequest(new { message = "Parameter 'id' menu wajib disertakan." });
+            return BadRequest(new { message = "Parameter 'id' master menu wajib disertakan." });
         }
 
         try
         {
-            await menuService.DeleteMenuAsync(id);
-            return Ok(new { message = "Menu berhasil dihapus." });
+            await menuService.DeleteMasterMenuAsync(id);
+            return Ok(new { message = "Master menu berhasil dihapus." });
         }
         catch (MenuNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
         }
+        catch (InvalidMenuDataException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Terjadi kesalahan internal saat menghapus menu.", detail = ex.Message });
+            return StatusCode(500, new { message = "Terjadi kesalahan internal saat menghapus master menu.", detail = ex.Message });
         }
     }
 
-    // [Authorize(Roles = $"{RoleConstants.Admin},{RoleConstants.SuperAdmin}")] // Dinonaktifkan sementara untuk masa development
     [HttpPut("ToggleMenuStatus")]
     public async Task<IActionResult> ToggleMenuStatus([FromQuery] Guid id, [FromQuery] bool isActive)
     {
         if (id == Guid.Empty)
         {
-            return BadRequest(new { message = "Parameter 'id' menu wajib disertakan." });
+            return BadRequest(new { message = "Parameter 'id' master menu wajib disertakan." });
         }
 
         try
@@ -146,6 +163,92 @@ public class MenuController(IMenuService menuService) : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Terjadi kesalahan internal saat mengubah status menu.", detail = ex.Message });
+        }
+    }
+
+    // ==========================================
+    // 3. PENUGASAN JADWAL HARIAN (ASSIGNMENTS)
+    // ==========================================
+
+    [HttpPost("AssignMenuToDay")]
+    public async Task<IActionResult> AssignMenuToDay([FromBody] AssignMenuRequest request)
+    {
+        try
+        {
+            await menuService.AssignMenuToDayAsync(request);
+            return Ok(new { message = "Menu berhasil ditugaskan ke hari tersebut." });
+        }
+        catch (MenuNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidMenuDataException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Terjadi kesalahan internal saat menugaskan menu.", detail = ex.Message });
+        }
+    }
+
+    [HttpPost("BatchAssignMenusToDay")]
+    public async Task<IActionResult> BatchAssignMenusToDay([FromBody] BatchAssignMenusRequest request)
+    {
+        try
+        {
+            var count = await menuService.BatchAssignMenusToDayAsync(request);
+            return Ok(new { count, message = $"{count} menu berhasil ditugaskan ke jadwal hari." });
+        }
+        catch (InvalidMenuDataException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Terjadi kesalahan internal saat menugaskan batch menu.", detail = ex.Message });
+        }
+    }
+
+    [HttpDelete("RemoveMenuFromDay")]
+    public async Task<IActionResult> RemoveMenuFromDay([FromQuery] Guid assignmentId)
+    {
+        if (assignmentId == Guid.Empty)
+        {
+            return BadRequest(new { message = "Parameter 'assignmentId' wajib disertakan." });
+        }
+
+        try
+        {
+            await menuService.RemoveAssignmentAsync(assignmentId);
+            return Ok(new { message = "Menu berhasil dilepaskan dari jadwal hari." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Terjadi kesalahan internal saat melepaskan menu dari jadwal.", detail = ex.Message });
+        }
+    }
+
+    [HttpDelete("RemoveMenuFromDayByDay")]
+    public async Task<IActionResult> RemoveMenuFromDayByDay([FromQuery] Guid menuId, [FromQuery] int dayOfWeek)
+    {
+        if (menuId == Guid.Empty)
+        {
+            return BadRequest(new { message = "Parameter 'menuId' wajib disertakan." });
+        }
+
+        try
+        {
+            await menuService.RemoveAssignmentByMenuAndDayAsync(menuId, dayOfWeek);
+            return Ok(new { message = "Menu berhasil dilepaskan dari jadwal hari." });
+        }
+        catch (InvalidMenuDataException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Terjadi kesalahan internal saat melepaskan menu dari jadwal.", detail = ex.Message });
         }
     }
 }

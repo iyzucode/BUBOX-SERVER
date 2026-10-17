@@ -9,10 +9,7 @@ public class MenuRepository(IDbConnectionFactory connectionFactory) : IMenuRepos
 {
     private const string SelectColumns = """
         id AS Id,
-        day_of_week AS DayOfWeek,
-        day_name AS DayName,
-        menu_type AS MenuType,
-        category AS Category,
+        category_id AS CategoryId,
         name AS Name,
         description AS Description,
         ingredients AS Ingredients,
@@ -20,8 +17,10 @@ public class MenuRepository(IDbConnectionFactory connectionFactory) : IMenuRepos
         price AS Price,
         image_url AS ImageUrl,
         is_active AS IsActive,
+        is_deleted AS IsDeleted,
         created_at AS CreatedAt,
-        updated_at AS UpdatedAt
+        updated_at AS UpdatedAt,
+        deleted_at AS DeletedAt
         """;
 
     public async Task<Guid> CreateAsync(Menu menu)
@@ -29,10 +28,7 @@ public class MenuRepository(IDbConnectionFactory connectionFactory) : IMenuRepos
         using var connection = connectionFactory.CreateConnection();
         var sql = """
             INSERT INTO menus (
-                day_of_week,
-                day_name,
-                menu_type,
-                category,
+                category_id,
                 name,
                 description,
                 ingredients,
@@ -40,14 +36,12 @@ public class MenuRepository(IDbConnectionFactory connectionFactory) : IMenuRepos
                 price,
                 image_url,
                 is_active,
+                is_deleted,
                 created_at,
                 updated_at
             )
             VALUES (
-                @DayOfWeek,
-                @DayName,
-                @MenuType,
-                @Category,
+                @CategoryId,
                 @Name,
                 @Description,
                 @Ingredients,
@@ -55,6 +49,7 @@ public class MenuRepository(IDbConnectionFactory connectionFactory) : IMenuRepos
                 @Price,
                 @ImageUrl,
                 @IsActive,
+                false,
                 NOW(),
                 NOW()
             )
@@ -69,10 +64,7 @@ public class MenuRepository(IDbConnectionFactory connectionFactory) : IMenuRepos
         using var connection = connectionFactory.CreateConnection();
         var sql = """
             UPDATE menus
-            SET day_of_week = @DayOfWeek,
-                day_name = @DayName,
-                menu_type = @MenuType,
-                category = @Category,
+            SET category_id = @CategoryId,
                 name = @Name,
                 description = @Description,
                 ingredients = @Ingredients,
@@ -81,16 +73,24 @@ public class MenuRepository(IDbConnectionFactory connectionFactory) : IMenuRepos
                 image_url = @ImageUrl,
                 is_active = @IsActive,
                 updated_at = NOW()
-            WHERE id = @Id;
+            WHERE id = @Id AND is_deleted = false;
             """;
 
         await connection.ExecuteAsync(sql, menu);
     }
 
-    public async Task DeleteAsync(Guid id)
+    public async Task SoftDeleteAsync(Guid id)
     {
         using var connection = connectionFactory.CreateConnection();
-        var sql = "DELETE FROM menus WHERE id = @Id;";
+        var sql = """
+            UPDATE menus
+            SET is_deleted = true,
+                is_active = false,
+                deleted_at = NOW(),
+                updated_at = NOW()
+            WHERE id = @Id;
+            """;
+
         await connection.ExecuteAsync(sql, new { Id = id });
     }
 
@@ -101,7 +101,7 @@ public class MenuRepository(IDbConnectionFactory connectionFactory) : IMenuRepos
             UPDATE menus
             SET is_active = @IsActive,
                 updated_at = NOW()
-            WHERE id = @Id;
+            WHERE id = @Id AND is_deleted = false;
             """;
 
         await connection.ExecuteAsync(sql, new { Id = id, IsActive = isActive });
@@ -113,49 +113,52 @@ public class MenuRepository(IDbConnectionFactory connectionFactory) : IMenuRepos
         var sql = $"""
             SELECT {SelectColumns}
             FROM menus
-            WHERE id = @Id;
+            WHERE id = @Id AND is_deleted = false;
             """;
 
         return await connection.QuerySingleOrDefaultAsync<Menu>(sql, new { Id = id });
     }
 
-    public async Task<IEnumerable<Menu>> GetByDayAsync(int dayOfWeek, string? menuType = null)
+    public async Task<IEnumerable<Menu>> GetAllMasterMenusAsync(Guid? categoryId = null, string? search = null, bool includeInactive = false)
     {
         using var connection = connectionFactory.CreateConnection();
         var sql = $"""
             SELECT {SelectColumns}
             FROM menus
-            WHERE day_of_week = @DayOfWeek
-              AND (@MenuType IS NULL OR menu_type = @MenuType)
-            ORDER BY menu_type DESC, name ASC;
+            WHERE is_deleted = false
+              AND (@IncludeInactive = true OR is_active = true)
+              AND (@CategoryId IS NULL OR category_id = @CategoryId)
+              AND (@Search IS NULL OR LOWER(name) LIKE '%' || LOWER(@Search) || '%')
+            ORDER BY created_at DESC;
             """;
 
-        return await connection.QueryAsync<Menu>(sql, new { DayOfWeek = dayOfWeek, MenuType = menuType });
+        return await connection.QueryAsync<Menu>(sql, new
+        {
+            CategoryId = categoryId,
+            Search = search,
+            IncludeInactive = includeInactive
+        });
     }
 
-    public async Task<IEnumerable<Menu>> GetAllWeeklyMenusAsync(string? menuType = null)
+    public async Task<bool> ExistsByNameInCategoryAsync(Guid categoryId, string name, Guid? excludeId = null)
     {
         using var connection = connectionFactory.CreateConnection();
-        var sql = $"""
-            SELECT {SelectColumns}
-            FROM menus
-            WHERE (@MenuType IS NULL OR menu_type = @MenuType)
-            ORDER BY day_of_week ASC, menu_type DESC, name ASC;
+        var sql = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM menus
+                WHERE category_id = @CategoryId
+                  AND LOWER(TRIM(name)) = LOWER(TRIM(@Name))
+                  AND is_deleted = false
+                  AND (@ExcludeId IS NULL OR id != @ExcludeId)
+            );
             """;
 
-        return await connection.QueryAsync<Menu>(sql, new { MenuType = menuType });
-    }
-
-    public async Task<IEnumerable<Menu>> GetByCategoryAsync(string category)
-    {
-        using var connection = connectionFactory.CreateConnection();
-        var sql = $"""
-            SELECT {SelectColumns}
-            FROM menus
-            WHERE category = @Category
-            ORDER BY day_of_week ASC, name ASC;
-            """;
-
-        return await connection.QueryAsync<Menu>(sql, new { Category = category });
+        return await connection.ExecuteScalarAsync<bool>(sql, new
+        {
+            CategoryId = categoryId,
+            Name = name,
+            ExcludeId = excludeId
+        });
     }
 }

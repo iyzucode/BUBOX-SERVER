@@ -16,7 +16,9 @@ public static class DependencyInjection
         services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUserAddressRepository, UserAddressRepository>();
+        services.AddScoped<IMenuCategoryRepository, MenuCategoryRepository>();
         services.AddScoped<IMenuRepository, MenuRepository>();
+        services.AddScoped<IMenuAssignmentRepository, MenuAssignmentRepository>();
         services.AddScoped<IGeneralRepository, GeneralRepository>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtProvider, JwtProvider>();
