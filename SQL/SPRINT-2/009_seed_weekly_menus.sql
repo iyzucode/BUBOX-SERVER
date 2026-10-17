@@ -40,9 +40,37 @@ BEGIN
     SELECT id INTO v_pelengkap_id FROM rf_menu_categories WHERE code = 'PELENGKAP';
 
     -- 1. Insert Master Menus
+    -- Clean duplicate names if existed under another ID to satisfy unique index
+    DELETE FROM menus 
+    WHERE category_id = v_bubur_id 
+      AND LOWER(TRIM(name)) IN ('bubur daging ayam wortel spesial', 'bubur ikan salmon tomat', 'bubur daging sapi bayam labu', 'bubur hati sapi brokoli gurih')
+      AND id NOT IN (m_bubur_ayam, m_bubur_salmon, m_bubur_sapi, m_bubur_hati);
+
+    DELETE FROM menus 
+    WHERE category_id = v_nasitim_id 
+      AND LOWER(TRIM(name)) IN ('nasi tim ayam jamur gurih', 'nasi tim ikan dori wortel', 'nasi tim daging cincang manis')
+      AND id NOT IN (m_tim_ayam, m_tim_dori, m_tim_sapi);
+
+    DELETE FROM menus 
+    WHERE category_id = v_sup_id 
+      AND LOWER(TRIM(name)) IN ('sup krim ayam jagung manis', 'sup brokoli daging ikan salmon', 'sup labu daging sapi cincang')
+      AND id NOT IN (m_sup_ayam, m_sup_salmon, m_sup_sapi);
+
+    DELETE FROM menus 
+    WHERE category_id = v_snack_id 
+      AND LOWER(TRIM(name)) IN ('makaroni schottle', 'puding buah naga pisang', 'puree alpukat pisang keju')
+      AND id NOT IN (m_snack_makaroni, m_snack_puding, m_snack_puree);
+
+    DELETE FROM menus 
+    WHERE category_id = v_pelengkap_id 
+      AND LOWER(TRIM(name)) IN ('pepes ikan kembung', 'perkedel tahu telur puyuh', 'nugget ayam wortel homemade')
+      AND id NOT IN (m_pelengkap_pepes, m_pelengkap_perkedel, m_pelengkap_nugget);
+
     -- BUBUR
     INSERT INTO menus (id, category_id, name, description, ingredients, nutrition_info, price, is_active, is_deleted, created_at, updated_at)
     VALUES
+    (m_bubur_ayam, v_bubur_id, 'Bubur Daging Ayam Wortel Spesial', 'Bubur MPASI lezat bergizi seimbang dengan tekstur lembut yang disukai bayi.', 'Beras organik, fillet ayam kampung, wortel segar, kaldu ayam', 'Energi 150 kkal, Protein 9.0g, Lemak 3.2g', 26000.00, true, false, NOW(), NOW()),
+    (m_bubur_salmon, v_bubur_id, 'Bubur Ikan Salmon Tomat', 'Bubur MPASI kaya omega-3 untuk stimulasi kecerdasan otak bayi.', 'Beras organik, fillet ikan salmon norwegia, tomat manis segar', 'Energi 155 kkal, Protein 9.2g, Omega-3 450mg', 28000.00, true, false, NOW(), NOW()),
     (m_bubur_sapi, v_bubur_id, 'Bubur Daging Sapi Bayam Labu', 'Bubur beras merah kaya zat besi dengan daging sapi cincang halus dan sari labu.', 'Beras merah, daging sapi giling, bayam hijau, labu kuning, kaldu sapi', 'Energi 165 kkal, Protein 7.2g, Zat Besi 2.8mg', 27000.00, true, false, NOW(), NOW()),
     (m_bubur_hati, v_bubur_id, 'Bubur Hati Sapi Brokoli Gurih', 'Bubur lembut dengan hati sapi pilihan tinggi zat besi pencegah stunting.', 'Beras organik, hati sapi segar, brokoli cincang, wortel, mentega tawar', 'Energi 170 kkal, Protein 8.0g, Zat Besi 3.5mg', 25000.00, true, false, NOW(), NOW())
     ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, price = EXCLUDED.price, is_deleted = false, is_active = true;
@@ -66,6 +94,7 @@ BEGIN
     -- SNACK
     INSERT INTO menus (id, category_id, name, description, ingredients, nutrition_info, price, is_active, is_deleted, created_at, updated_at)
     VALUES
+    (m_snack_makaroni, v_snack_id, 'Makaroni Schottle', 'Snack gurih lezat kaya kalsium pendamping makan utama.', 'Makaroni gandum, telur, susu pasteurisasi, keju cheddar', 'Energi 120 kkal, Protein 5.0g, Kalsium 110mg', 15000.00, true, false, NOW(), NOW()),
     (m_snack_puding, v_snack_id, 'Puding Buah Naga Pisang', 'Puding serat alami buah naga merah dan pisang ambon manis menyegarkan.', 'Buah naga merah, pisang ambon matang, agar-agar rumput laut, air kelapa murni', 'Energi 85 kkal, Serat 2.5g, Vitamin C 15mg', 12000.00, true, false, NOW(), NOW()),
     (m_snack_puree, v_snack_id, 'Puree Alpukat Pisang Keju', 'Snack creamy penambah berat badan kaya lemak baik nabati dan kalsium keju.', 'Alpukat mentega matang, pisang cavendish, parutan keju cheddar baby-safe', 'Energi 140 kkal, Lemak Baik 8.2g, Kalsium 80mg', 14000.00, true, false, NOW(), NOW())
     ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, price = EXCLUDED.price, is_deleted = false, is_active = true;
@@ -73,6 +102,7 @@ BEGIN
     -- PELENGKAP
     INSERT INTO menus (id, category_id, name, description, ingredients, nutrition_info, price, is_active, is_deleted, created_at, updated_at)
     VALUES
+    (m_pelengkap_pepes, v_pelengkap_id, 'Pepes Ikan Kembung', 'Lauk pendamping kaya asam lemak tak jenuh dan protein tinggi.', 'Ikan kembung banjar, kemangi organik, bumbu rempah kuning ramah anak', 'Energi 110 kkal, Protein 10.1g, DHA 180mg', 15000.00, true, false, NOW(), NOW()),
     (m_pelengkap_perkedel, v_pelengkap_id, 'Perkedel Tahu Telur Puyuh', 'Perkedel lembut kaya protein nabati dan telur puyuh utuh di dalamnya.', 'Tahu susu lembut, telur puyuh rebus, daun seledri, bawang putih panggang', 'Energi 110 kkal, Protein 5.8g, Kolin 65mg', 12000.00, true, false, NOW(), NOW()),
     (m_pelengkap_nugget, v_pelengkap_id, 'Nugget Ayam Wortel Homemade', 'Nugget kukus ayam non-MSG dengan parutan wortel renyah sehat.', 'Daging dada ayam giling, wortel parut, tepung oat, telur ayam omega-3', 'Energi 135 kkal, Protein 7.0g, Vitamin A 220mcg', 16000.00, true, false, NOW(), NOW())
     ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, price = EXCLUDED.price, is_deleted = false, is_active = true;
