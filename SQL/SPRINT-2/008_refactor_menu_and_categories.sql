@@ -19,13 +19,13 @@ CREATE INDEX IF NOT EXISTS idx_rf_menu_categories_type ON rf_menu_categories(cat
 CREATE INDEX IF NOT EXISTS idx_rf_menu_categories_active ON rf_menu_categories(is_active) WHERE is_deleted = false;
 
 -- 2. Seed Data Kategori Default
-INSERT INTO rf_menu_categories (code, name, category_type, display_order)
+INSERT INTO rf_menu_categories (id, code, name, category_type, display_order)
 VALUES 
-    ('BUBUR', 'Bubur', 'UTAMA', 1),
-    ('NASI_TIM', 'Nasi Tim', 'UTAMA', 2),
-    ('SUP', 'Sup', 'UTAMA', 3),
-    ('SNACK', 'Snack', 'SEKUNDER', 4),
-    ('PELENGKAP', 'Pelengkap', 'SEKUNDER', 5)
+    ('34e8efb8-be36-456d-89b1-8cca88d1011b', 'BUBUR', 'Bubur', 'UTAMA', 1),
+    ('7c2c6589-da98-4310-bfd6-b9741e65abd5', 'NASI_TIM', 'Nasi Tim', 'UTAMA', 2),
+    ('852ab500-aa84-40b2-be1b-c198702c573c', 'SUP', 'Sup', 'UTAMA', 3),
+    ('f705d124-8e23-4061-8ebb-9103eba1e0d2', 'SNACK', 'Snack', 'SEKUNDER', 4),
+    ('f9aaff46-88f2-4865-b82c-d51521c3fc39', 'PELENGKAP', 'Pelengkap', 'SEKUNDER', 5)
 ON CONFLICT (code) DO NOTHING;
 
 -- 3. Tambahkan Kolom Baru dan Soft Delete ke Tabel menus

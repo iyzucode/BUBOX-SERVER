@@ -32,6 +32,13 @@ DECLARE
     m_pelengkap_perkedel UUID := 'f1a11111-1111-4111-8111-111111111111';
     m_pelengkap_nugget UUID := 'f2a22222-2222-4222-8222-222222222222';
 BEGIN
+    -- Resolve dynamic category IDs from rf_menu_categories
+    SELECT id INTO v_bubur_id FROM rf_menu_categories WHERE code = 'BUBUR';
+    SELECT id INTO v_nasitim_id FROM rf_menu_categories WHERE code = 'NASI_TIM';
+    SELECT id INTO v_sup_id FROM rf_menu_categories WHERE code = 'SUP';
+    SELECT id INTO v_snack_id FROM rf_menu_categories WHERE code = 'SNACK';
+    SELECT id INTO v_pelengkap_id FROM rf_menu_categories WHERE code = 'PELENGKAP';
+
     -- 1. Insert Master Menus
     -- BUBUR
     INSERT INTO menus (id, category_id, name, description, ingredients, nutrition_info, price, is_active, is_deleted, created_at, updated_at)
