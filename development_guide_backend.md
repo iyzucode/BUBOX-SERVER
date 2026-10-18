@@ -7,6 +7,7 @@
 
 ## 1. Core Principles & Vibe Coding Rules
 Sebagai AI Assistant, Anda HARUS mematuhi aturan berikut saat meng-generate atau memodifikasi kode di proyek ini:
+- **STRICTLY No Auto Push**: DILARANG KERAS melakukan `git push` ke repositori remote secara otomatis setelah melakukan perubahan atau commit. Tindakan `git push` HANYA boleh dijalankan jika diperintahkan secara eksplisit oleh pengguna.
 - **STRICTLY Dapper**: Dilarang menggunakan Entity Framework Core (EF Core). Semua interaksi database harus menggunakan **Dapper** dengan raw SQL queries (selalu gunakan parameterized queries untuk mencegah SQL Injection).
 - **Clean Architecture Enforcement**:
   - `Domain` TIDAK BOLEH memiliki dependensi ke layer lain atau framework eksternal.
