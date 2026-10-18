@@ -19,6 +19,8 @@ public class UserAddressRepository(IDbConnectionFactory connectionFactory) : IUs
         province AS Province,
         postal_code AS PostalCode,
         notes AS Notes,
+        latitude AS Latitude,
+        longitude AS Longitude,
         is_primary AS IsPrimary,
         created_at AS CreatedAt,
         updated_at AS UpdatedAt
@@ -87,12 +89,12 @@ public class UserAddressRepository(IDbConnectionFactory connectionFactory) : IUs
                 INSERT INTO user_addresses (
                     id, user_id, label, recipient_name, phone_number,
                     full_address, subdistrict, city, province, postal_code,
-                    notes, is_primary, created_at, updated_at
+                    notes, latitude, longitude, is_primary, created_at, updated_at
                 )
                 VALUES (
                     @Id, @UserId, @Label, @RecipientName, @PhoneNumber,
                     @FullAddress, @Subdistrict, @City, @Province, @PostalCode,
-                    @Notes, @IsPrimary, @CreatedAt, @UpdatedAt
+                    @Notes, @Latitude, @Longitude, @IsPrimary, @CreatedAt, @UpdatedAt
                 );
                 """;
 
@@ -140,6 +142,8 @@ public class UserAddressRepository(IDbConnectionFactory connectionFactory) : IUs
                     province = @Province,
                     postal_code = @PostalCode,
                     notes = @Notes,
+                    latitude = @Latitude,
+                    longitude = @Longitude,
                     is_primary = @IsPrimary,
                     updated_at = @UpdatedAt
                 WHERE id = @Id AND user_id = @UserId;

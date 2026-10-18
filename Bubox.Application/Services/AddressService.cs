@@ -40,6 +40,8 @@ public class AddressService(IUserAddressRepository addressRepository) : IAddress
             Province = request.Province.Trim(),
             PostalCode = request.PostalCode.Trim(),
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
             IsPrimary = isPrimary,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -65,6 +67,8 @@ public class AddressService(IUserAddressRepository addressRepository) : IAddress
         address.Province = request.Province.Trim();
         address.PostalCode = request.PostalCode.Trim();
         address.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+        address.Latitude = request.Latitude ?? address.Latitude;
+        address.Longitude = request.Longitude ?? address.Longitude;
         address.IsPrimary = isPrimary;
         address.UpdatedAt = DateTime.UtcNow;
 
@@ -111,6 +115,8 @@ public class AddressService(IUserAddressRepository addressRepository) : IAddress
         address.Province,
         address.PostalCode,
         address.Notes,
+        address.Latitude,
+        address.Longitude,
         address.IsPrimary,
         address.CreatedAt,
         address.UpdatedAt

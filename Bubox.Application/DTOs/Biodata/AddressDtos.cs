@@ -12,6 +12,8 @@ public record AddressDto(
     string Province,
     string PostalCode,
     string? Notes,
+    double? Latitude,
+    double? Longitude,
     bool IsPrimary,
     DateTime CreatedAt,
     DateTime UpdatedAt
@@ -27,6 +29,8 @@ public record CreateAddressRequest(
     string Province,
     string PostalCode,
     string? Notes,
+    double? Latitude = null,
+    double? Longitude = null,
     bool IsPrimary = false
 );
 
@@ -40,5 +44,7 @@ public record UpdateAddressRequest(
     string Province,
     string PostalCode,
     string? Notes,
+    double? Latitude = null,
+    double? Longitude = null,
     bool IsPrimary = false
 );
