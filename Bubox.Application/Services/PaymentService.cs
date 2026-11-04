@@ -49,8 +49,9 @@ public class PaymentService(
         {
             Id = Guid.NewGuid(),
             PaymentId = payment?.Id,
-            ProviderOrderId = orderId,
-            TransactionStatus = transactionStatus,
+            // Log audit tidak boleh menggagalkan webhook: potong nilai yang tidak wajar
+            ProviderOrderId = Truncate(orderId, 255),
+            TransactionStatus = Truncate(transactionStatus, 100),
             SignatureValid = signatureValid,
             RawPayload = rawPayload,
             ReceivedAt = DateTime.UtcNow
@@ -210,6 +211,9 @@ public class PaymentService(
         status.TransactionStatus is MidtransTransactionStatuses.Deny
             or MidtransTransactionStatuses.Cancel
             or MidtransTransactionStatuses.Failure;
+
+    private static string? Truncate(string? value, int maxLength) =>
+        value != null && value.Length > maxLength ? value[..maxLength] : value;
 
     private static void MarkReview(Payment payment, string note)
     {

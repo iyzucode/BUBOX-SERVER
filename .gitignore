@@ -27,3 +27,6 @@ TestResults/
 ## OS generated
 .DS_Store
 Thumbs.db
+
+## Konfigurasi lokal per-environment (berisi secret, jangan di-commit)
+Bubox.Api/configuration.*.yml
