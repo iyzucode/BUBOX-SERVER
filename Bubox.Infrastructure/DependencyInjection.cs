@@ -6,6 +6,7 @@ using Bubox.Infrastructure.Security;
 using Bubox.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bubox.Infrastructure;
 
@@ -23,6 +24,22 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtProvider, JwtProvider>();
         services.AddScoped<IEmailSender, EmailSender>();
+
+        // Order & payment
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<IOrderStatusTransitionRepository, OrderStatusTransitionRepository>();
+        services.AddScoped<IAppSettingRepository, AppSettingRepository>();
+        services.AddScoped<IOrderUnitOfWorkFactory, OrderUnitOfWorkFactory>();
+
+        // HttpClient tunggal yang berumur panjang; koneksi di-refresh berkala agar perubahan DNS terbaca
+        services.AddSingleton<IPaymentGateway>(sp => new MidtransPaymentGateway(
+            new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) })
+            {
+                Timeout = TimeSpan.FromSeconds(30)
+            },
+            configuration,
+            sp.GetRequiredService<ILogger<MidtransPaymentGateway>>()));
 
         return services;
     }

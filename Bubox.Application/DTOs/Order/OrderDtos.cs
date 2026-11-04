@@ -1,0 +1,187 @@
+namespace Bubox.Application.DTOs.Order;
+
+// ==========================================
+// Request
+// ==========================================
+
+public record CreateOrderRequest(
+    string FulfillmentType,
+    Guid? AddressId,
+    string? Notes,
+    List<CreateOrderDayRequest> Days
+);
+
+public record CreateOrderDayRequest(
+    DateOnly DeliveryDate,
+    List<CreateOrderItemRequest> Items
+);
+
+public record CreateOrderItemRequest(
+    Guid MenuId,
+    int Qty
+);
+
+public record CancelOrderRequest(string? Reason);
+
+public record AdminCancelRequest(string Reason);
+
+public record UpdateDayStatusRequest(string StatusCode);
+
+public record OrderSearchRequest(
+    string? Status = null,
+    DateOnly? DeliveryDate = null,
+    DateOnly? CreatedFrom = null,
+    DateOnly? CreatedTo = null,
+    string? Search = null,
+    int Page = 1,
+    int PageSize = 20
+);
+
+// ==========================================
+// Response
+// ==========================================
+
+public record QrisPaymentDto(
+    string? QrString,
+    string? QrUrl,
+    string? Acquirer,
+    string TransactionStatus,
+    decimal GrossAmount,
+    DateTime? ExpiresAt,
+    DateTime? PaidAt
+);
+
+public record CreateOrderResponse(
+    Guid OrderId,
+    string OrderNumber,
+    string StatusCode,
+    decimal GrandTotal,
+    DateTime PaymentDueAt,
+    QrisPaymentDto Payment
+);
+
+public record AddressSnapshotDto(
+    Guid AddressId,
+    string Label,
+    string RecipientName,
+    string PhoneNumber,
+    string FullAddress,
+    string Subdistrict,
+    string City,
+    string Province,
+    string PostalCode,
+    string? Notes,
+    double? Latitude,
+    double? Longitude
+);
+
+public record OrderSummaryDto(
+    Guid Id,
+    string OrderNumber,
+    string StatusCode,
+    string FulfillmentType,
+    decimal GrandTotal,
+    int DaysCount,
+    DateOnly? FirstDeliveryDate,
+    DateOnly? LastDeliveryDate,
+    DateTime PaymentDueAt,
+    DateTime CreatedAt,
+    string CustomerName,
+    string CustomerEmail
+);
+
+public record PagedResult<T>(
+    IReadOnlyList<T> Items,
+    int Page,
+    int PageSize,
+    int TotalCount
+);
+
+public record OrderItemDto(
+    Guid Id,
+    Guid MenuId,
+    string MenuName,
+    string CategoryCode,
+    string CategoryName,
+    decimal UnitPrice,
+    int Qty,
+    decimal LineTotal
+);
+
+public record OrderDayDto(
+    Guid Id,
+    DateOnly DeliveryDate,
+    int DayOfWeek,
+    string DayName,
+    string StatusCode,
+    decimal DaySubtotal,
+    bool RequiresManualRefund,
+    string? CancelReason,
+    DateTime? CancelledAt,
+    IReadOnlyList<OrderItemDto> Items
+);
+
+public record OrderStatusHistoryDto(
+    string Scope,
+    Guid EntityId,
+    string? FromCode,
+    string ToCode,
+    string ActorRole,
+    string? Reason,
+    DateTime CreatedAt
+);
+
+public record OrderDetailDto(
+    Guid Id,
+    string OrderNumber,
+    Guid UserId,
+    string StatusCode,
+    string FulfillmentType,
+    AddressSnapshotDto? Address,
+    string? Notes,
+    decimal Subtotal,
+    decimal DiscountAmount,
+    decimal DeliveryFee,
+    decimal GrandTotal,
+    DateTime PaymentDueAt,
+    DateTime? PaidAt,
+    DateTime? CompletedAt,
+    DateTime? CancelledAt,
+    string? CancelReason,
+    DateTime CreatedAt,
+    QrisPaymentDto? Payment,
+    IReadOnlyList<OrderDayDto> Days,
+    IReadOnlyList<OrderStatusHistoryDto> Histories
+);
+
+public record ProductionMenuSummaryDto(
+    Guid MenuId,
+    string MenuName,
+    string CategoryName,
+    int TotalQty
+);
+
+public record DailyOrderDayDto(
+    Guid OrderDayId,
+    Guid OrderId,
+    string OrderNumber,
+    string CustomerName,
+    string FulfillmentType,
+    string StatusCode,
+    AddressSnapshotDto? Address,
+    string? Notes,
+    IReadOnlyList<OrderItemDto> Items
+);
+
+public record DailyProductionDto(
+    DateOnly Date,
+    int TotalOrders,
+    int TotalPortions,
+    IReadOnlyList<ProductionMenuSummaryDto> Menus,
+    IReadOnlyList<DailyOrderDayDto> Orders
+);
+
+public record DailyDeliveriesDto(
+    DateOnly Date,
+    IReadOnlyList<DailyOrderDayDto> Deliveries
+);

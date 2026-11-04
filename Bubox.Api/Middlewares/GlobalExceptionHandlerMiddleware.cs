@@ -33,6 +33,16 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
             UserNotFoundException ex => (StatusCodes.Status404NotFound, "USER_NOT_FOUND", ex.Message),
             AddressNotFoundException ex => (StatusCodes.Status404NotFound, "ADDRESS_NOT_FOUND", ex.Message),
             CannotDeletePrimaryAddressException ex => (StatusCodes.Status400BadRequest, "CANNOT_DELETE_PRIMARY_ADDRESS", ex.Message),
+            OrderNotFoundException ex => (StatusCodes.Status404NotFound, "ORDER_NOT_FOUND", ex.Message),
+            InvalidOrderException ex => (StatusCodes.Status400BadRequest, "INVALID_ORDER", ex.Message),
+            OrderCutoffPassedException ex => (StatusCodes.Status400BadRequest, "ORDER_CUTOFF_PASSED", ex.Message),
+            InvalidStatusTransitionException ex => (StatusCodes.Status409Conflict, "INVALID_STATUS_TRANSITION", ex.Message),
+            ForbiddenStatusTransitionException ex => (StatusCodes.Status403Forbidden, "FORBIDDEN_STATUS_TRANSITION", ex.Message),
+            OrderConcurrencyException ex => (StatusCodes.Status409Conflict, "ORDER_CONCURRENCY_CONFLICT", ex.Message),
+            PaymentGatewayException ex => (StatusCodes.Status502BadGateway, "PAYMENT_GATEWAY_ERROR", ex.Message),
+            InvalidPaymentNotificationException ex => (StatusCodes.Status400BadRequest, "INVALID_PAYMENT_NOTIFICATION", ex.Message),
+            InvalidSettingException ex => (StatusCodes.Status400BadRequest, "INVALID_SETTING", ex.Message),
+            UnauthorizedAccessException ex => (StatusCodes.Status401Unauthorized, "UNAUTHORIZED", ex.Message),
             _ => (StatusCodes.Status500InternalServerError, "INTERNAL_SERVER_ERROR", "Terjadi kesalahan pada server.")
         };
 

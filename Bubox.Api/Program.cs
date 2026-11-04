@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using Bubox.Api.BackgroundServices;
 using Bubox.Api.Middlewares;
 using Bubox.Application;
 using Bubox.Infrastructure;
@@ -90,6 +91,9 @@ builder.Services.AddAuthorization();
 // Register Clean Architecture layers
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Background job: menutup order yang lewat batas waktu bayar
+builder.Services.AddHostedService<OrderExpiryHostedService>();
 
 var app = builder.Build();
 

@@ -18,4 +18,18 @@ public static class RoleConstants
         public const string Owner = "OWNER";
         public const string SuperAdmin = "SUPER_ADMIN";
     }
+
+    private static readonly Dictionary<string, string> NameToCode = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { Customer, Codes.Customer },
+        { Admin, Codes.Admin },
+        { Driver, Codes.Driver },
+        { Kitchen, Codes.Kitchen },
+        { Owner, Codes.Owner },
+        { SuperAdmin, Codes.SuperAdmin }
+    };
+
+    /// <summary>Mengubah nama role (yang ada di klaim JWT) menjadi kode role (rf_roles.code).</summary>
+    public static string? ToCode(string roleName) =>
+        NameToCode.TryGetValue(roleName.Trim(), out var code) ? code : null;
 }

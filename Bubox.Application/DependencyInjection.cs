@@ -13,6 +13,11 @@ public static class DependencyInjection
         services.AddScoped<IMenuService, MenuService>();
         services.AddScoped<IMenuCategoryService, MenuCategoryService>();
         services.AddScoped<IGeneralService, GeneralService>();
+        services.AddScoped<ISettingsService, SettingsService>();
+        services.AddScoped<OrderStatusEngine>();
+        services.AddScoped<IOrderService, OrderService>();
+        services.AddScoped<IOrderAdminService, OrderAdminService>();
+        services.AddScoped<IPaymentService, PaymentService>();
         return services;
     }
 }

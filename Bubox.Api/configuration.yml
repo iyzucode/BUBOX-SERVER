@@ -14,6 +14,16 @@ Jwt:
   Audience: "Bubox.Client"
   ExpiryMinutes: 1440
 
+# Midtrans Core API (QRIS). Jangan commit ServerKey: isi lewat environment variable
+# Midtrans__ServerKey dan Midtrans__IsProduction di server/docker-compose.
+Midtrans:
+  ServerKey: ""
+  IsProduction: false
+  QrisAcquirer: "gopay"
+
+OrderExpiry:
+  Enabled: true
+
 Menu:
   MaxImageSizeMB: 1
   MaxImageSizeBytes: 1048576
