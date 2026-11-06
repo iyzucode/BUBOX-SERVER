@@ -87,7 +87,11 @@ public record OrderSummaryDto(
     DateTime PaymentDueAt,
     DateTime CreatedAt,
     string CustomerName,
-    string CustomerEmail
+    string CustomerEmail,
+    IReadOnlyList<DateOnly> DeliveryDates,
+    int ItemLinesCount,
+    Guid? FirstMenuId,
+    string? FirstMenuName
 );
 
 public record PagedResult<T>(

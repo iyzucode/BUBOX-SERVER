@@ -18,6 +18,10 @@ public class OrderListItem
     public int DaysCount { get; set; }
     public DateTime? FirstDeliveryDate { get; set; }
     public DateTime? LastDeliveryDate { get; set; }
+    public string[]? DeliveryDates { get; set; } // yyyy-MM-dd, urut naik
+    public int ItemLinesCount { get; set; } // jumlah baris item (menu × hari)
+    public Guid? FirstMenuId { get; set; }
+    public string? FirstMenuName { get; set; }
     public int TotalCount { get; set; } // dipakai untuk paging (COUNT(*) OVER())
 }
 

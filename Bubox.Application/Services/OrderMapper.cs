@@ -45,7 +45,13 @@ internal static class OrderMapper
         PaymentDueAt: o.PaymentDueAt,
         CreatedAt: o.CreatedAt,
         CustomerName: o.CustomerName,
-        CustomerEmail: o.CustomerEmail
+        CustomerEmail: o.CustomerEmail,
+        DeliveryDates: (o.DeliveryDates ?? [])
+            .Select(d => DateOnly.ParseExact(d, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture))
+            .ToList(),
+        ItemLinesCount: o.ItemLinesCount,
+        FirstMenuId: o.FirstMenuId,
+        FirstMenuName: o.FirstMenuName
     );
 
     public static OrderItemDto ToDto(OrderItem i) => new(

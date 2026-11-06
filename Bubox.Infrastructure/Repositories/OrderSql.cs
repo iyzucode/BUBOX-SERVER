@@ -88,6 +88,24 @@ internal static class OrderSql
         o.created_at AS CreatedAt,
         (SELECT COUNT(*)::int FROM order_days dd WHERE dd.order_id = o.id) AS DaysCount,
         (SELECT MIN(dd.delivery_date) FROM order_days dd WHERE dd.order_id = o.id) AS FirstDeliveryDate,
-        (SELECT MAX(dd.delivery_date) FROM order_days dd WHERE dd.order_id = o.id) AS LastDeliveryDate
+        (SELECT MAX(dd.delivery_date) FROM order_days dd WHERE dd.order_id = o.id) AS LastDeliveryDate,
+        (SELECT array_agg(to_char(dd.delivery_date, 'YYYY-MM-DD') ORDER BY dd.delivery_date)
+            FROM order_days dd WHERE dd.order_id = o.id) AS DeliveryDates,
+        (SELECT COUNT(*)::int FROM order_items ii JOIN order_days dd ON dd.id = ii.order_day_id
+            WHERE dd.order_id = o.id) AS ItemLinesCount,
+        first_item.menu_id AS FirstMenuId,
+        first_item.menu_name AS FirstMenuName
+        """;
+
+    /// <summary>Menu pertama (hari kirim paling awal) untuk thumbnail di daftar order. Dipakai bersama OrderListColumns.</summary>
+    public const string FirstItemJoin = """
+        LEFT JOIN LATERAL (
+            SELECT ii.menu_id, ii.menu_name
+            FROM order_items ii
+            JOIN order_days dd ON dd.id = ii.order_day_id
+            WHERE dd.order_id = o.id
+            ORDER BY dd.delivery_date ASC, ii.created_at ASC, ii.menu_name ASC
+            LIMIT 1
+        ) first_item ON TRUE
         """;
 }

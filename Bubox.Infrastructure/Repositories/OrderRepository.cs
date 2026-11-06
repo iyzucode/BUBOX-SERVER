@@ -27,6 +27,7 @@ public class OrderRepository(IDbConnectionFactory connectionFactory) : IOrderRep
             SELECT {OrderSql.OrderListColumns}, 0 AS TotalCount
             FROM orders o
             JOIN users u ON u.id = o.user_id
+            {OrderSql.FirstItemJoin}
             WHERE o.user_id = @UserId
             ORDER BY o.created_at DESC;
             """;
@@ -78,6 +79,7 @@ public class OrderRepository(IDbConnectionFactory connectionFactory) : IOrderRep
             SELECT {OrderSql.OrderListColumns}, COUNT(*) OVER()::int AS TotalCount
             FROM orders o
             JOIN users u ON u.id = o.user_id
+            {OrderSql.FirstItemJoin}
             {where}
             ORDER BY o.created_at DESC
             LIMIT @Limit OFFSET @Offset;
