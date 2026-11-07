@@ -1,10 +1,13 @@
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
+using Bubox.Api;
 using Bubox.Api.BackgroundServices;
 using Bubox.Api.Middlewares;
 using Bubox.Application;
 using Bubox.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
@@ -88,6 +91,31 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddAuthorization();
 
+// Rate limiting endpoint auth per alamat IP (melindungi OTP dari tebak paksa & spam email).
+// Catatan: di belakang reverse proxy, aktifkan ForwardedHeaders agar IP asli yang terbaca.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(RateLimitPolicies.Auth, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            statusCode = StatusCodes.Status429TooManyRequests,
+            errorCode = "TOO_MANY_REQUESTS",
+            message = "Terlalu banyak permintaan. Coba lagi dalam 1 menit."
+        }, cancellationToken);
+    };
+});
+
 // Register Clean Architecture layers
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -106,6 +134,7 @@ app.UseCors();
 // Authentication & Authorization middleware
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 // Configure HTTP pipeline
 if (app.Environment.IsDevelopment())

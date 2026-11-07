@@ -20,3 +20,6 @@ public class InvalidOtpException(string message = "Kode OTP tidak valid atau tel
 
 public class UserNotFoundException(string message = "Pengguna tidak ditemukan.")
     : Exception(message);
+
+public class OtpAttemptsExceededException(string message = "Terlalu banyak percobaan kode yang salah. Silakan minta kode baru.")
+    : Exception(message);

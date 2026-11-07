@@ -10,3 +10,6 @@ public record ResetPasswordRequest(string Email, string OtpCode, string NewPassw
 public record UserDto(Guid Id, string Username, string Email, string FullName, bool IsEmailVerified, List<string> Roles);
 public record AuthResponse(string Token, UserDto User);
 public record MessageResponse(string Message);
+
+/// <summary>Hasil verifikasi email: akun langsung masuk (token + user).</summary>
+public record VerifyEmailResponse(string Message, string Token, UserDto User);

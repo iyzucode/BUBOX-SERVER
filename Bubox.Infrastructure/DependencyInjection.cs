@@ -4,6 +4,7 @@ using Bubox.Infrastructure.Data;
 using Bubox.Infrastructure.Repositories;
 using Bubox.Infrastructure.Security;
 using Bubox.Infrastructure.Services;
+using Bubox.Infrastructure.Services.Email;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,7 +24,18 @@ public static class DependencyInjection
         services.AddScoped<IGeneralRepository, GeneralRepository>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtProvider, JwtProvider>();
-        services.AddScoped<IEmailSender, EmailSender>();
+
+        // Email: mode "Smtp" (Resend) atau "Log" (development, hanya tulis ke log)
+        var emailSection = configuration.GetSection(EmailOptions.SectionName);
+        services.Configure<EmailOptions>(emailSection);
+        if (string.Equals(emailSection[nameof(EmailOptions.Mode)], EmailModes.Smtp, StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
+        }
+        else
+        {
+            services.AddScoped<IEmailSender, LogEmailSender>();
+        }
 
         // Order & payment
         services.AddScoped<IOrderRepository, OrderRepository>();

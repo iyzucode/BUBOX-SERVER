@@ -30,6 +30,7 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
             UsernameAlreadyExistsException ex => (StatusCodes.Status409Conflict, "USERNAME_ALREADY_EXISTS", ex.Message),
             InvalidUsernameException ex => (StatusCodes.Status400BadRequest, "INVALID_USERNAME", ex.Message),
             InvalidOtpException ex => (StatusCodes.Status400BadRequest, "INVALID_OTP", ex.Message),
+            OtpAttemptsExceededException ex => (StatusCodes.Status400BadRequest, "OTP_ATTEMPTS_EXCEEDED", ex.Message),
             UserNotFoundException ex => (StatusCodes.Status404NotFound, "USER_NOT_FOUND", ex.Message),
             AddressNotFoundException ex => (StatusCodes.Status404NotFound, "ADDRESS_NOT_FOUND", ex.Message),
             CannotDeletePrimaryAddressException ex => (StatusCodes.Status400BadRequest, "CANNOT_DELETE_PRIMARY_ADDRESS", ex.Message),

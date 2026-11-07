@@ -21,6 +21,22 @@ Midtrans:
   IsProduction: false
   QrisAcquirer: "gopay"
 
+# Email OTP. Mode "Log" = hanya tulis ke log (development); "Smtp" = kirim sungguhan.
+# Resend: Host smtp.resend.com, Port 465, Username "resend", Password = API key.
+# Jangan commit API key: isi lewat environment variable Email__Smtp__Password.
+# FromAddress harus dari domain yang sudah diverifikasi di Resend; sebelum itu pakai
+# onboarding@resend.dev (hanya bisa mengirim ke email pemilik akun Resend).
+Email:
+  Mode: "Log"
+  FromAddress: "onboarding@resend.dev"
+  FromName: "LUANNA"
+  Smtp:
+    Host: "smtp.resend.com"
+    Port: 465
+    Username: "resend"
+    Password: ""
+    TimeoutSeconds: 15
+
 OrderExpiry:
   Enabled: true
 

@@ -3,11 +3,13 @@ using Bubox.Application.DTOs.Auth;
 using Bubox.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Bubox.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[EnableRateLimiting(RateLimitPolicies.Auth)]
 public class AuthController(IAuthService authService) : ControllerBase
 {
     [HttpPost("register")]

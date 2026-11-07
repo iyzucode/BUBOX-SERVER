@@ -123,34 +123,47 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         await connection.ExecuteAsync(sql, new { UserId = userId, UpdatedAt = DateTime.UtcNow });
     }
 
-    public async Task SaveOtpAsync(UserOtp otp)
+    private const string OtpColumns = """
+        id AS Id,
+        user_id AS UserId,
+        otp_hash AS OtpHash,
+        type AS Type,
+        expires_at AS ExpiresAt,
+        is_used AS IsUsed,
+        attempt_count AS AttemptCount,
+        created_at AS CreatedAt
+        """;
+
+    public async Task ReplaceActiveOtpAsync(UserOtp otp)
     {
         using var connection = connectionFactory.CreateConnection();
-        const string sql = """
-            INSERT INTO user_otps (id, user_id, otp_code, type, expires_at, is_used, created_at)
-            VALUES (@Id, @UserId, @OtpCode, @Type, @ExpiresAt, @IsUsed, @CreatedAt);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        const string invalidateSql = """
+            UPDATE user_otps
+            SET is_used = TRUE
+            WHERE user_id = @UserId AND type = @Type AND is_used = FALSE;
+            """;
+        const string insertSql = """
+            INSERT INTO user_otps (id, user_id, otp_hash, type, expires_at, is_used, attempt_count, created_at)
+            VALUES (@Id, @UserId, @OtpHash, @Type, @ExpiresAt, FALSE, 0, @CreatedAt);
             """;
 
-        await connection.ExecuteAsync(sql, otp);
+        await connection.ExecuteAsync(invalidateSql, new { otp.UserId, otp.Type }, transaction);
+        await connection.ExecuteAsync(insertSql, otp, transaction);
+        transaction.Commit();
     }
 
-    public async Task<UserOtp?> GetValidOtpAsync(Guid userId, string otpCode, string type)
+    public async Task<UserOtp?> GetActiveOtpAsync(Guid userId, string type)
     {
         using var connection = connectionFactory.CreateConnection();
-        const string sql = """
-            SELECT 
-                id AS Id,
-                user_id AS UserId,
-                otp_code AS OtpCode,
-                type AS Type,
-                expires_at AS ExpiresAt,
-                is_used AS IsUsed,
-                created_at AS CreatedAt
+        var sql = $"""
+            SELECT {OtpColumns}
             FROM user_otps
-            WHERE user_id = @UserId 
-              AND otp_code = @OtpCode 
-              AND type = @Type 
-              AND is_used = FALSE 
+            WHERE user_id = @UserId
+              AND type = @Type
+              AND is_used = FALSE
               AND expires_at > @Now
             ORDER BY created_at DESC
             LIMIT 1;
@@ -159,22 +172,48 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         return await connection.QuerySingleOrDefaultAsync<UserOtp>(sql, new
         {
             UserId = userId,
-            OtpCode = otpCode,
             Type = type,
             Now = DateTime.UtcNow
         });
     }
 
-    public async Task MarkOtpUsedAsync(Guid otpId)
+    public async Task<int> IncrementOtpAttemptAsync(Guid otpId)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = """
+            UPDATE user_otps
+            SET attempt_count = attempt_count + 1
+            WHERE id = @OtpId
+            RETURNING attempt_count;
+            """;
+
+        return await connection.ExecuteScalarAsync<int>(sql, new { OtpId = otpId });
+    }
+
+    public async Task<bool> TryMarkOtpUsedAsync(Guid otpId)
     {
         using var connection = connectionFactory.CreateConnection();
         const string sql = """
             UPDATE user_otps
             SET is_used = TRUE
-            WHERE id = @OtpId;
+            WHERE id = @OtpId AND is_used = FALSE;
             """;
 
-        await connection.ExecuteAsync(sql, new { OtpId = otpId });
+        return await connection.ExecuteAsync(sql, new { OtpId = otpId }) == 1;
+    }
+
+    public async Task<OtpSendStats> GetOtpSendStatsAsync(Guid userId, string type, DateTime since)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = """
+            SELECT
+                MAX(created_at) AS LastCreatedAt,
+                COUNT(*) FILTER (WHERE created_at >= @Since)::int AS CountInWindow
+            FROM user_otps
+            WHERE user_id = @UserId AND type = @Type;
+            """;
+
+        return await connection.QuerySingleAsync<OtpSendStats>(sql, new { UserId = userId, Type = type, Since = since });
     }
 
     public async Task<IEnumerable<string>> GetUserRolesAsync(Guid userId)
