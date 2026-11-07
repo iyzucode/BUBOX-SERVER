@@ -241,7 +241,7 @@ public partial class AuthService(
 
         var roles = (await userRepository.GetUserRolesAsync(userId)).ToList();
 
-        return new UserDto(user.Id, user.Username, user.Email, user.FullName, user.IsEmailVerified, roles);
+        return UserDtoFactory.Create(user, roles);
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
@@ -274,7 +274,7 @@ public partial class AuthService(
     {
         var roles = (await userRepository.GetUserRolesAsync(user.Id)).ToList();
         var token = jwtProvider.GenerateToken(user, roles);
-        var userDto = new UserDto(user.Id, user.Username, user.Email, user.FullName, user.IsEmailVerified, roles);
+        var userDto = UserDtoFactory.Create(user, roles);
         return new AuthResponse(token, userDto);
     }
 

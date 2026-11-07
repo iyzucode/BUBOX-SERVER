@@ -10,7 +10,8 @@ public record GoogleLoginRequest(string IdToken);
 
 public record ResetPasswordRequest(string Email, string OtpCode, string NewPassword);
 
-public record UserDto(Guid Id, string Username, string Email, string FullName, bool IsEmailVerified, List<string> Roles);
+/// <param name="AvatarUrl">Path relatif API foto profil (berversi); null = tampilkan huruf awal nama.</param>
+public record UserDto(Guid Id, string Username, string Email, string FullName, bool IsEmailVerified, List<string> Roles, string? AvatarUrl);
 public record AuthResponse(string Token, UserDto User);
 public record MessageResponse(string Message);
 

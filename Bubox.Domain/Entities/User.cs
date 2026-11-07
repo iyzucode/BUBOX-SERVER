@@ -11,4 +11,12 @@ public class User
     public bool IsEmailVerified { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>Waktu foto profil terakhir diubah; null = belum punya foto (tampil huruf awal).</summary>
+    public DateTime? AvatarUpdatedAt { get; set; }
+    /// <summary>Unggahan foto terakhir (dasar batas 7 hari); tetap terisi walau foto dihapus.</summary>
+    public DateTime? AvatarChangedAt { get; set; }
+    public DateTime? FullNameChangedAt { get; set; }
+    public DateTime? UsernameChangedAt { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? WhatsappNumber { get; set; }
 }

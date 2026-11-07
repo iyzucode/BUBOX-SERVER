@@ -29,3 +29,19 @@ public class InvalidGoogleTokenException(string message = "Login Google gagal. S
 
 public class PasswordNotSetException(string message = "Akun ini terdaftar lewat Google. Masuk dengan Google, atau buat kata sandi lewat \"Lupa password\".")
     : Exception(message);
+
+public class InvalidAvatarException(string message = "Foto profil harus berupa gambar JPG, PNG, atau WebP.")
+    : Exception(message);
+
+public class AvatarTooLargeException(string message)
+    : Exception(message);
+
+/// <summary>Data profil masih dalam batas waktu perubahan (nama 7 hari, username 30 hari, foto 7 hari).</summary>
+public class ProfileChangeCooldownException(string message)
+    : Exception(message);
+
+public class InvalidFullNameException(string message = "Nama harus 2-100 karakter dan hanya berisi huruf, spasi, titik, petik, atau tanda hubung.")
+    : Exception(message);
+
+public class InvalidPhoneNumberException(string message = "Nomor harus diawali 08 atau +62 dan terdiri dari 10-14 digit.")
+    : Exception(message);

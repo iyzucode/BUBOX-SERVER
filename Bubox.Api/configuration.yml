@@ -56,3 +56,7 @@ OrderExpiry:
 Menu:
   MaxImageSizeMB: 1
   MaxImageSizeBytes: 1048576
+
+# Foto profil (disimpan di database). Aplikasi sudah memperkecil foto ke 512px sebelum unggah.
+Profile:
+  MaxAvatarBytes: 2097152

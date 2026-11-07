@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Bubox.Application.DTOs.Biodata;
+using Bubox.Application.DTOs.Profile;
 using Bubox.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +10,7 @@ namespace Bubox.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class BiodataController(IAddressService addressService) : ControllerBase
+public class BiodataController(IAddressService addressService, IProfileService profileService) : ControllerBase
 {
     private Guid GetUserId()
     {
@@ -115,4 +116,80 @@ public class BiodataController(IAddressService addressService) : ControllerBase
         await addressService.DeleteAddressAsync(id, userId);
         return Ok(new { message = "Alamat berhasil dihapus." });
     }
+
+    /// <summary>Data screen Detail Profil, termasuk kapan nama/username/foto boleh diubah lagi.</summary>
+    [HttpGet("Profile")]
+    public async Task<IActionResult> GetProfile()
+    {
+        return Ok(await profileService.GetProfileAsync(GetUserId()));
+    }
+
+    /// <summary>Ganti nama lengkap (7 hari sekali).</summary>
+    [HttpPut("Profile/Name")]
+    public async Task<IActionResult> UpdateFullName([FromBody] UpdateFullNameRequest request)
+    {
+        return Ok(await profileService.UpdateFullNameAsync(GetUserId(), request.FullName));
+    }
+
+    /// <summary>Ganti username (30 hari sekali).</summary>
+    [HttpPut("Profile/Username")]
+    public async Task<IActionResult> UpdateUsername([FromBody] UpdateUsernameRequest request)
+    {
+        return Ok(await profileService.UpdateUsernameAsync(GetUserId(), request.Username));
+    }
+
+    /// <summary>Ganti nomor HP & WhatsApp.</summary>
+    [HttpPut("Profile/Contact")]
+    public async Task<IActionResult> UpdateContact([FromBody] UpdateContactRequest request)
+    {
+        return Ok(await profileService.UpdateContactAsync(GetUserId(), request));
+    }
+
+    /// <summary>Unggah/ganti foto profil (multipart, field "file"; 7 hari sekali). Mengembalikan data user terbaru.</summary>
+    [HttpPut("Avatar")]
+    [RequestSizeLimit(AvatarRequestLimitBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = AvatarRequestLimitBytes)]
+    public async Task<IActionResult> UpdateAvatar(IFormFile? file)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new { errorCode = "INVALID_AVATAR", message = "Pilih foto terlebih dahulu." });
+        }
+
+        var userId = GetUserId();
+        await using var stream = new MemoryStream((int)file.Length);
+        await file.CopyToAsync(stream);
+
+        var user = await profileService.UpdateAvatarAsync(userId, stream.ToArray());
+        return Ok(user);
+    }
+
+    [HttpDelete("Avatar")]
+    public async Task<IActionResult> RemoveAvatar()
+    {
+        var user = await profileService.RemoveAvatarAsync(GetUserId());
+        return Ok(user);
+    }
+
+    /// <summary>
+    /// Gambar foto profil. Publik agar bisa dipakai langsung di &lt;img&gt;; URL dari API
+    /// sudah berversi (?v=…) sehingga aman di-cache lama.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("Avatar/{userId:guid}")]
+    public async Task<IActionResult> GetAvatar(Guid userId)
+    {
+        var avatar = await profileService.GetAvatarAsync(userId);
+        if (avatar is null)
+        {
+            return NotFound();
+        }
+
+        Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        Response.Headers.XContentTypeOptions = "nosniff";
+        return File(avatar.Data, avatar.ContentType);
+    }
+
+    // Batas body sedikit di atas batas foto (2 MB) untuk overhead multipart.
+    private const long AvatarRequestLimitBytes = 3 * 1024 * 1024;
 }

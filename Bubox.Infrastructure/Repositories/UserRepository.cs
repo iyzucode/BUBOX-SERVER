@@ -1,3 +1,4 @@
+using Bubox.Domain.Constants;
 using Dapper;
 using Bubox.Domain.Entities;
 using Bubox.Domain.Interfaces;
@@ -19,7 +20,13 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                 full_name AS FullName,
                 is_email_verified AS IsEmailVerified,
                 created_at AS CreatedAt,
-                updated_at AS UpdatedAt
+                updated_at AS UpdatedAt,
+                avatar_updated_at AS AvatarUpdatedAt,
+                avatar_changed_at AS AvatarChangedAt,
+                full_name_changed_at AS FullNameChangedAt,
+                username_changed_at AS UsernameChangedAt,
+                phone_number AS PhoneNumber,
+                whatsapp_number AS WhatsappNumber
             FROM users
             WHERE id = @Id;
             """;
@@ -39,7 +46,13 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                 full_name AS FullName,
                 is_email_verified AS IsEmailVerified,
                 created_at AS CreatedAt,
-                updated_at AS UpdatedAt
+                updated_at AS UpdatedAt,
+                avatar_updated_at AS AvatarUpdatedAt,
+                avatar_changed_at AS AvatarChangedAt,
+                full_name_changed_at AS FullNameChangedAt,
+                username_changed_at AS UsernameChangedAt,
+                phone_number AS PhoneNumber,
+                whatsapp_number AS WhatsappNumber
             FROM users
             WHERE LOWER(email) = LOWER(@Email);
             """;
@@ -59,7 +72,13 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                 full_name AS FullName,
                 is_email_verified AS IsEmailVerified,
                 created_at AS CreatedAt,
-                updated_at AS UpdatedAt
+                updated_at AS UpdatedAt,
+                avatar_updated_at AS AvatarUpdatedAt,
+                avatar_changed_at AS AvatarChangedAt,
+                full_name_changed_at AS FullNameChangedAt,
+                username_changed_at AS UsernameChangedAt,
+                phone_number AS PhoneNumber,
+                whatsapp_number AS WhatsappNumber
             FROM users
             WHERE LOWER(username) = LOWER(@Username);
             """;
@@ -79,7 +98,13 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                 full_name AS FullName,
                 is_email_verified AS IsEmailVerified,
                 created_at AS CreatedAt,
-                updated_at AS UpdatedAt
+                updated_at AS UpdatedAt,
+                avatar_updated_at AS AvatarUpdatedAt,
+                avatar_changed_at AS AvatarChangedAt,
+                full_name_changed_at AS FullNameChangedAt,
+                username_changed_at AS UsernameChangedAt,
+                phone_number AS PhoneNumber,
+                whatsapp_number AS WhatsappNumber
             FROM users
             WHERE LOWER(email) = LOWER(@Identifier) OR LOWER(username) = LOWER(@Identifier);
             """;
@@ -274,7 +299,13 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                 u.full_name AS FullName,
                 u.is_email_verified AS IsEmailVerified,
                 u.created_at AS CreatedAt,
-                u.updated_at AS UpdatedAt
+                u.updated_at AS UpdatedAt,
+                u.avatar_updated_at AS AvatarUpdatedAt,
+                u.avatar_changed_at AS AvatarChangedAt,
+                u.full_name_changed_at AS FullNameChangedAt,
+                u.username_changed_at AS UsernameChangedAt,
+                u.phone_number AS PhoneNumber,
+                u.whatsapp_number AS WhatsappNumber
             FROM user_external_logins el
             JOIN users u ON u.id = el.user_id
             WHERE el.provider = @Provider AND el.provider_user_id = @ProviderUserId;
@@ -312,5 +343,132 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         await connection.ExecuteAsync(InsertExternalLoginSql, login, transaction);
 
         transaction.Commit();
+    }
+
+    public async Task<bool> TryUpsertAvatarAsync(UserAvatar avatar, DateTime changeAllowedBefore)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        // Klaim jatah perubahan dulu (atomik); bila masih dalam batas waktu, tidak ada yang disimpan.
+        const string claimSql = """
+            UPDATE users
+            SET avatar_updated_at = @UpdatedAt, avatar_changed_at = @UpdatedAt, updated_at = @UpdatedAt
+            WHERE id = @UserId AND (avatar_changed_at IS NULL OR avatar_changed_at <= @ChangeAllowedBefore);
+            """;
+        const string upsertSql = """
+            INSERT INTO user_avatars (user_id, content_type, data, updated_at)
+            VALUES (@UserId, @ContentType, @Data, @UpdatedAt)
+            ON CONFLICT (user_id) DO UPDATE
+            SET content_type = EXCLUDED.content_type, data = EXCLUDED.data, updated_at = EXCLUDED.updated_at;
+            """;
+
+        var claimed = await connection.ExecuteAsync(
+            claimSql,
+            new { avatar.UserId, avatar.UpdatedAt, ChangeAllowedBefore = changeAllowedBefore },
+            transaction);
+        if (claimed == 0)
+        {
+            transaction.Rollback();
+            return false;
+        }
+
+        await connection.ExecuteAsync(upsertSql, avatar, transaction);
+        transaction.Commit();
+        return true;
+    }
+
+    public async Task<bool> TryUpdateFullNameAsync(Guid userId, string fullName, DateTime changeAllowedBefore)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = """
+            UPDATE users
+            SET full_name = @FullName, full_name_changed_at = @Now, updated_at = @Now
+            WHERE id = @UserId AND (full_name_changed_at IS NULL OR full_name_changed_at <= @ChangeAllowedBefore);
+            """;
+
+        var affected = await connection.ExecuteAsync(sql, new
+        {
+            UserId = userId,
+            FullName = fullName,
+            Now = DateTime.UtcNow,
+            ChangeAllowedBefore = changeAllowedBefore,
+        });
+        return affected > 0;
+    }
+
+    public async Task<UsernameUpdateResult> TryUpdateUsernameAsync(Guid userId, string username, DateTime changeAllowedBefore)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = """
+            UPDATE users
+            SET username = @Username, username_changed_at = @Now, updated_at = @Now
+            WHERE id = @UserId AND (username_changed_at IS NULL OR username_changed_at <= @ChangeAllowedBefore);
+            """;
+
+        try
+        {
+            var affected = await connection.ExecuteAsync(sql, new
+            {
+                UserId = userId,
+                Username = username,
+                Now = DateTime.UtcNow,
+                ChangeAllowedBefore = changeAllowedBefore,
+            });
+            return affected > 0 ? UsernameUpdateResult.Updated : UsernameUpdateResult.CooldownActive;
+        }
+        catch (Npgsql.PostgresException ex) when (ex.SqlState == Npgsql.PostgresErrorCodes.UniqueViolation)
+        {
+            // Username diambil akun lain di sela pengecekan (indeks unik lower(username)).
+            return UsernameUpdateResult.Taken;
+        }
+    }
+
+    public async Task UpdateContactAsync(Guid userId, string? phoneNumber, string? whatsappNumber)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = """
+            UPDATE users
+            SET phone_number = @PhoneNumber, whatsapp_number = @WhatsappNumber, updated_at = @Now
+            WHERE id = @UserId;
+            """;
+
+        await connection.ExecuteAsync(sql, new
+        {
+            UserId = userId,
+            PhoneNumber = phoneNumber,
+            WhatsappNumber = whatsappNumber,
+            Now = DateTime.UtcNow,
+        });
+    }
+
+    public async Task DeleteAvatarAsync(Guid userId)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        await connection.ExecuteAsync(
+            "DELETE FROM user_avatars WHERE user_id = @UserId;",
+            new { UserId = userId },
+            transaction);
+        await connection.ExecuteAsync(
+            "UPDATE users SET avatar_updated_at = NULL, updated_at = @Now WHERE id = @UserId;",
+            new { UserId = userId, Now = DateTime.UtcNow },
+            transaction);
+        transaction.Commit();
+    }
+
+    public async Task<UserAvatar?> GetAvatarAsync(Guid userId)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = """
+            SELECT user_id AS UserId, content_type AS ContentType, data AS Data, updated_at AS UpdatedAt
+            FROM user_avatars
+            WHERE user_id = @UserId;
+            """;
+
+        return await connection.QuerySingleOrDefaultAsync<UserAvatar>(sql, new { UserId = userId });
     }
 }

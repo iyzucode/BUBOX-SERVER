@@ -1,3 +1,4 @@
+using Bubox.Domain.Constants;
 using Bubox.Domain.Entities;
 
 namespace Bubox.Domain.Interfaces;
@@ -40,4 +41,23 @@ public interface IUserRepository
     /// <summary>Buat user baru + peran + tautan penyedia luar dalam satu transaksi.</summary>
     Task CreateWithExternalLoginAsync(User user, string roleCode, UserExternalLogin login);
     Task AddUserRoleAsync(Guid userId, string roleCode);
+
+    /// <summary>
+    /// Simpan/ganti foto profil bila unggahan terakhir sebelum <paramref name="changeAllowedBefore"/>
+    /// (satu transaksi). False = masih dalam batas waktu, tidak ada yang disimpan.
+    /// </summary>
+    Task<bool> TryUpsertAvatarAsync(UserAvatar avatar, DateTime changeAllowedBefore);
+
+    /// <summary>Ganti nama bila perubahan terakhir sebelum <paramref name="changeAllowedBefore"/>. False = masih dibatasi.</summary>
+    Task<bool> TryUpdateFullNameAsync(Guid userId, string fullName, DateTime changeAllowedBefore);
+
+    /// <summary>Ganti username dengan cek batas waktu & keunikan secara atomik.</summary>
+    Task<UsernameUpdateResult> TryUpdateUsernameAsync(Guid userId, string username, DateTime changeAllowedBefore);
+
+    Task UpdateContactAsync(Guid userId, string? phoneNumber, string? whatsappNumber);
+
+    /// <summary>Hapus foto profil; pengguna kembali tampil dengan huruf awal.</summary>
+    Task DeleteAvatarAsync(Guid userId);
+
+    Task<UserAvatar?> GetAvatarAsync(Guid userId);
 }
