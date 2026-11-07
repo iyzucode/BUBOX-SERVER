@@ -189,3 +189,15 @@ public record DailyDeliveriesDto(
     DateOnly Date,
     IReadOnlyList<DailyOrderDayDto> Deliveries
 );
+
+/// <summary>
+/// Respons GET /Order/GetPaymentStatus: hanya status, untuk di-poll tiap beberapa detik
+/// oleh halaman pembayaran. Detail lengkap diambil sekali lewat GetDetailOrder.
+/// </summary>
+public record OrderPaymentStatusDto(
+    Guid OrderId,
+    string StatusCode,
+    DateTime PaymentDueAt,
+    DateTime? PaidAt,
+    string? CancelReason
+);

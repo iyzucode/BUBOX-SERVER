@@ -279,6 +279,25 @@ public class OrderService(
         return orders.Select(OrderMapper.ToSummary).ToList();
     }
 
+    public async Task<OrderPaymentStatusDto> GetPaymentStatusAsync(Guid orderId, OrderActor actor)
+    {
+        var status = await orderRepository.GetPaymentStatusAsync(orderId)
+            ?? throw new OrderNotFoundException();
+
+        // Sama seperti detail: pesanan orang lain dianggap tidak ada.
+        if (status.UserId != actor.UserId && !actor.IsStaff)
+        {
+            throw new OrderNotFoundException();
+        }
+
+        return new OrderPaymentStatusDto(
+            status.OrderId,
+            status.StatusCode,
+            status.PaymentDueAt,
+            status.PaidAt,
+            status.CancelReason);
+    }
+
     public async Task<OrderDetailDto> GetOrderDetailAsync(Guid orderId, OrderActor actor)
     {
         var order = await orderRepository.GetByIdAsync(orderId)

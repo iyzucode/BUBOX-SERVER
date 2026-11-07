@@ -20,6 +20,24 @@ public class OrderRepository(IDbConnectionFactory connectionFactory) : IOrderRep
         return await connection.QuerySingleOrDefaultAsync<Order>(sql, new { Id = id });
     }
 
+    public async Task<OrderPaymentStatus?> GetPaymentStatusAsync(Guid id)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = """
+            SELECT
+                o.id AS OrderId,
+                o.user_id AS UserId,
+                o.status_code AS StatusCode,
+                o.payment_due_at AS PaymentDueAt,
+                o.paid_at AS PaidAt,
+                o.cancel_reason AS CancelReason
+            FROM orders o
+            WHERE o.id = @Id;
+            """;
+
+        return await connection.QuerySingleOrDefaultAsync<OrderPaymentStatus>(sql, new { Id = id });
+    }
+
     public async Task<IEnumerable<OrderListItem>> GetByUserIdAsync(Guid userId)
     {
         using var connection = connectionFactory.CreateConnection();

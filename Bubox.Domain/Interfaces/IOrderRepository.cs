@@ -50,9 +50,21 @@ public class OrderSearchFilter
     public int PageSize { get; set; } = 20;
 }
 
+/// <summary>Status ringan untuk polling halaman pembayaran (tanpa hari, item, histori).</summary>
+public class OrderPaymentStatus
+{
+    public Guid OrderId { get; set; }
+    public Guid UserId { get; set; }
+    public string StatusCode { get; set; } = string.Empty;
+    public DateTime PaymentDueAt { get; set; }
+    public DateTime? PaidAt { get; set; }
+    public string? CancelReason { get; set; }
+}
+
 public interface IOrderRepository
 {
     Task<Order?> GetByIdAsync(Guid id);
+    Task<OrderPaymentStatus?> GetPaymentStatusAsync(Guid id);
     Task<IEnumerable<OrderListItem>> GetByUserIdAsync(Guid userId);
     Task<IEnumerable<OrderListItem>> SearchAsync(OrderSearchFilter filter);
     Task<IEnumerable<OrderDay>> GetDaysByOrderIdAsync(Guid orderId);

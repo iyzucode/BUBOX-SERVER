@@ -37,6 +37,19 @@ public class OrderController(IOrderService orderService) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Status pembayaran saja (ringan) untuk di-poll halaman QRIS.</summary>
+    [HttpGet("GetPaymentStatus")]
+    public async Task<IActionResult> GetPaymentStatus([FromQuery] Guid id)
+    {
+        if (id == Guid.Empty)
+        {
+            return BadRequest(new { message = "Parameter 'id' pesanan wajib disertakan." });
+        }
+
+        var result = await orderService.GetPaymentStatusAsync(id, User.ToOrderActor());
+        return Ok(result);
+    }
+
     [HttpPut("CancelOrder")]
     public async Task<IActionResult> CancelOrder([FromQuery] Guid id, [FromBody] CancelOrderRequest? request)
     {

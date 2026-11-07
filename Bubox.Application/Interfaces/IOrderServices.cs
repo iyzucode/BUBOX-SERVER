@@ -9,6 +9,9 @@ public interface IOrderService
     Task<CreateOrderResponse> CreateOrderAsync(OrderActor actor, CreateOrderRequest request);
     Task<IReadOnlyList<OrderSummaryDto>> GetMyOrdersAsync(Guid userId);
     Task<OrderDetailDto> GetOrderDetailAsync(Guid orderId, OrderActor actor);
+
+    /// <summary>Status ringan untuk polling halaman pembayaran QRIS.</summary>
+    Task<OrderPaymentStatusDto> GetPaymentStatusAsync(Guid orderId, OrderActor actor);
     Task CancelOrderAsync(Guid orderId, OrderActor actor, string? reason);
 }
 
