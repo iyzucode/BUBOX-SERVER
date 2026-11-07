@@ -15,6 +15,12 @@ public class UserAddress
     public string? Notes { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
+
+    /// <summary>ID tempat Google Maps (opsional).</summary>
+    public string? PlaceId { get; set; }
+
+    /// <summary>Kode kelurahan/desa rf_wilayah, mis. 34.01.01.2001 (opsional).</summary>
+    public string? WilayahCode { get; set; }
     public bool IsPrimary { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

@@ -42,6 +42,8 @@ public class AddressService(IUserAddressRepository addressRepository) : IAddress
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
             Latitude = request.Latitude,
             Longitude = request.Longitude,
+            PlaceId = NormalizePlaceId(request.PlaceId),
+            WilayahCode = NormalizeWilayahCode(request.WilayahCode),
             IsPrimary = isPrimary,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -69,6 +71,8 @@ public class AddressService(IUserAddressRepository addressRepository) : IAddress
         address.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
         address.Latitude = request.Latitude ?? address.Latitude;
         address.Longitude = request.Longitude ?? address.Longitude;
+        address.PlaceId = NormalizePlaceId(request.PlaceId) ?? address.PlaceId;
+        address.WilayahCode = NormalizeWilayahCode(request.WilayahCode) ?? address.WilayahCode;
         address.IsPrimary = isPrimary;
         address.UpdatedAt = DateTime.UtcNow;
 
@@ -103,6 +107,22 @@ public class AddressService(IUserAddressRepository addressRepository) : IAddress
         await addressRepository.DeleteAsync(id, userId);
     }
 
+    private static readonly System.Text.RegularExpressions.Regex VillageCodeRegex =
+        new(@"^\d{2}\.\d{2}\.\d{2}\.\d{4}$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>Hanya terima kode kelurahan/desa berformat resmi; selain itu diabaikan.</summary>
+    private static string? NormalizeWilayahCode(string? code)
+    {
+        var trimmed = code?.Trim();
+        return !string.IsNullOrEmpty(trimmed) && VillageCodeRegex.IsMatch(trimmed) ? trimmed : null;
+    }
+
+    private static string? NormalizePlaceId(string? placeId)
+    {
+        var trimmed = placeId?.Trim();
+        return string.IsNullOrEmpty(trimmed) ? null : trimmed[..Math.Min(trimmed.Length, 255)];
+    }
+
     private static AddressDto MapToDto(UserAddress address) => new(
         address.Id,
         address.UserId,
@@ -117,6 +137,8 @@ public class AddressService(IUserAddressRepository addressRepository) : IAddress
         address.Notes,
         address.Latitude,
         address.Longitude,
+        address.PlaceId,
+        address.WilayahCode,
         address.IsPrimary,
         address.CreatedAt,
         address.UpdatedAt

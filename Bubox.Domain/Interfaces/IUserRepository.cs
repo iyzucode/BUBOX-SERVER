@@ -9,7 +9,8 @@ public interface IUserRepository
     Task<User?> GetByUsernameAsync(string username);
     Task<User?> GetByIdentifierAsync(string identifier);
     Task<Guid> CreateAsync(User user);
-    Task UpdatePasswordAsync(Guid userId, string passwordHash);
+    /// <summary>Ganti kata sandi; null = hapus (akun hanya bisa masuk lewat penyedia luar).</summary>
+    Task UpdatePasswordAsync(Guid userId, string? passwordHash);
     Task SetEmailVerifiedAsync(Guid userId);
 
     /// <summary>Simpan OTP baru dan batalkan semua OTP aktif lain dengan user & tipe yang sama (satu transaksi).</summary>
@@ -26,5 +27,17 @@ public interface IUserRepository
 
     Task<OtpSendStats> GetOtpSendStatsAsync(Guid userId, string type, DateTime since);
     Task<IEnumerable<string>> GetUserRolesAsync(Guid userId);
+
+    /// <summary>User yang tertaut ke akun penyedia luar (mis. Google "sub").</summary>
+    Task<User?> GetByExternalLoginAsync(string provider, string providerUserId);
+
+    /// <summary>Tautkan akun penyedia luar ke user yang sudah ada.</summary>
+    Task AddExternalLoginAsync(UserExternalLogin login);
+
+    /// <summary>Catat waktu masuk terakhir lewat penyedia luar.</summary>
+    Task TouchExternalLoginAsync(string provider, string providerUserId);
+
+    /// <summary>Buat user baru + peran + tautan penyedia luar dalam satu transaksi.</summary>
+    Task CreateWithExternalLoginAsync(User user, string roleCode, UserExternalLogin login);
     Task AddUserRoleAsync(Guid userId, string roleCode);
 }

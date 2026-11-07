@@ -23,3 +23,9 @@ public class UserNotFoundException(string message = "Pengguna tidak ditemukan.")
 
 public class OtpAttemptsExceededException(string message = "Terlalu banyak percobaan kode yang salah. Silakan minta kode baru.")
     : Exception(message);
+
+public class InvalidGoogleTokenException(string message = "Login Google gagal. Silakan coba lagi.")
+    : Exception(message);
+
+public class PasswordNotSetException(string message = "Akun ini terdaftar lewat Google. Masuk dengan Google, atau buat kata sandi lewat \"Lupa password\".")
+    : Exception(message);

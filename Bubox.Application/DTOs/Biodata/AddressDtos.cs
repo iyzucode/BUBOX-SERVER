@@ -14,6 +14,8 @@ public record AddressDto(
     string? Notes,
     double? Latitude,
     double? Longitude,
+    string? PlaceId,
+    string? WilayahCode,
     bool IsPrimary,
     DateTime CreatedAt,
     DateTime UpdatedAt
@@ -31,7 +33,9 @@ public record CreateAddressRequest(
     string? Notes,
     double? Latitude = null,
     double? Longitude = null,
-    bool IsPrimary = false
+    bool IsPrimary = false,
+    string? PlaceId = null,
+    string? WilayahCode = null
 );
 
 public record UpdateAddressRequest(
@@ -46,5 +50,7 @@ public record UpdateAddressRequest(
     string? Notes,
     double? Latitude = null,
     double? Longitude = null,
-    bool IsPrimary = false
+    bool IsPrimary = false,
+    string? PlaceId = null,
+    string? WilayahCode = null
 );

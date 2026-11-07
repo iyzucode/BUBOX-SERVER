@@ -6,6 +6,7 @@ public interface IAuthService
 {
     Task<MessageResponse> RegisterAsync(RegisterRequest request);
     Task<AuthResponse> LoginAsync(LoginRequest request);
+    Task<AuthResponse> GoogleLoginAsync(GoogleLoginRequest request);
     Task<VerifyEmailResponse> VerifyEmailAsync(VerifyEmailRequest request);
     Task<MessageResponse> ResendOtpAsync(ResendOtpRequest request);
     Task<MessageResponse> ForgotPasswordAsync(ForgotPasswordRequest request);

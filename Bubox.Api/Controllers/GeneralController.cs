@@ -1,4 +1,5 @@
 using Bubox.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bubox.Api.Controllers;
@@ -7,6 +8,18 @@ namespace Bubox.Api.Controllers;
 [Route("api/[controller]")]
 public class GeneralController(IGeneralService generalService) : ControllerBase
 {
+    /// <summary>
+    /// Titik peta → alamat + kode wilayah resmi. Wajib login agar kuota Google Maps
+    /// tidak dipakai oleh pihak luar.
+    /// </summary>
+    [Authorize]
+    [HttpGet("ResolveLocation")]
+    public async Task<IActionResult> ResolveLocation([FromQuery] double latitude, [FromQuery] double longitude)
+    {
+        var result = await generalService.ResolveLocationAsync(latitude, longitude);
+        return Ok(result);
+    }
+
     [HttpGet("GetProvinces")]
     public async Task<IActionResult> GetProvinces()
     {

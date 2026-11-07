@@ -5,6 +5,7 @@ using Bubox.Infrastructure.Repositories;
 using Bubox.Infrastructure.Security;
 using Bubox.Infrastructure.Services;
 using Bubox.Infrastructure.Services.Email;
+using Bubox.Infrastructure.Services.Google;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -36,6 +37,22 @@ public static class DependencyInjection
         {
             services.AddScoped<IEmailSender, LogEmailSender>();
         }
+
+        // Login Google: verifikasi ID token (singleton agar kunci publik Google di-cache)
+        services.Configure<GoogleAuthOptions>(configuration.GetSection(GoogleAuthOptions.SectionName));
+        services.AddSingleton<IGoogleTokenVerifier, GoogleTokenVerifier>();
+
+        // Google Maps: reverse geocoding (titik peta → alamat), hasil di-cache di memori
+        services.AddMemoryCache();
+        services.Configure<GoogleMapsOptions>(configuration.GetSection(GoogleMapsOptions.SectionName));
+        services.AddSingleton<IReverseGeocoder>(sp => new GoogleReverseGeocoder(
+            new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) })
+            {
+                Timeout = TimeSpan.FromSeconds(10)
+            },
+            sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<GoogleMapsOptions>>(),
+            sp.GetRequiredService<ILogger<GoogleReverseGeocoder>>()));
 
         // Order & payment
         services.AddScoped<IOrderRepository, OrderRepository>();

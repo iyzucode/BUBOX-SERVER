@@ -37,6 +37,19 @@ Email:
     Password: ""
     TimeoutSeconds: 15
 
+# Login Google (alur ID token). Client ID bukan rahasia; client secret tidak dipakai.
+# Tambahkan Client ID Android/iOS ke daftar ini saat aplikasi ponsel siap.
+Google:
+  ClientIds:
+    - "331482618694-7lbeh050haoe6p544ppgdkucbld57fk3.apps.googleusercontent.com"
+
+# Google Maps (alamat). ServerApiKey = key khusus server untuk Geocoding API; RAHASIA:
+# isi di configuration.Development.yml atau environment variable GoogleMaps__ServerApiKey.
+# Key browser (peta & pencarian) ada di Client: EXPO_PUBLIC_GOOGLE_MAPS_API_KEY.
+GoogleMaps:
+  ServerApiKey: ""
+  CacheHours: 24
+
 OrderExpiry:
   Enabled: true
 

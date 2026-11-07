@@ -26,6 +26,14 @@ public class AuthController(IAuthService authService) : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>Masuk/daftar dengan Google. Body: ID token dari Google Sign-In.</summary>
+    [HttpPost("google")]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+    {
+        var response = await authService.GoogleLoginAsync(request);
+        return Ok(response);
+    }
+
     [HttpPost("verify-email")]
     public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request)
     {

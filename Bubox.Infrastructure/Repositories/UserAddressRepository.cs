@@ -21,6 +21,8 @@ public class UserAddressRepository(IDbConnectionFactory connectionFactory) : IUs
         notes AS Notes,
         latitude AS Latitude,
         longitude AS Longitude,
+        place_id AS PlaceId,
+        wilayah_code AS WilayahCode,
         is_primary AS IsPrimary,
         created_at AS CreatedAt,
         updated_at AS UpdatedAt
@@ -89,12 +91,12 @@ public class UserAddressRepository(IDbConnectionFactory connectionFactory) : IUs
                 INSERT INTO user_addresses (
                     id, user_id, label, recipient_name, phone_number,
                     full_address, subdistrict, city, province, postal_code,
-                    notes, latitude, longitude, is_primary, created_at, updated_at
+                    notes, latitude, longitude, place_id, wilayah_code, is_primary, created_at, updated_at
                 )
                 VALUES (
                     @Id, @UserId, @Label, @RecipientName, @PhoneNumber,
                     @FullAddress, @Subdistrict, @City, @Province, @PostalCode,
-                    @Notes, @Latitude, @Longitude, @IsPrimary, @CreatedAt, @UpdatedAt
+                    @Notes, @Latitude, @Longitude, @PlaceId, @WilayahCode, @IsPrimary, @CreatedAt, @UpdatedAt
                 );
                 """;
 
@@ -144,6 +146,8 @@ public class UserAddressRepository(IDbConnectionFactory connectionFactory) : IUs
                     notes = @Notes,
                     latitude = @Latitude,
                     longitude = @Longitude,
+                    place_id = @PlaceId,
+                    wilayah_code = @WilayahCode,
                     is_primary = @IsPrimary,
                     updated_at = @UpdatedAt
                 WHERE id = @Id AND user_id = @UserId;

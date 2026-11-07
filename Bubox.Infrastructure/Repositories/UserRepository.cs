@@ -99,7 +99,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
         return user.Id;
     }
 
-    public async Task UpdatePasswordAsync(Guid userId, string passwordHash)
+    public async Task UpdatePasswordAsync(Guid userId, string? passwordHash)
     {
         using var connection = connectionFactory.CreateConnection();
         const string sql = """
@@ -242,5 +242,75 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
             """;
 
         await connection.ExecuteAsync(sql, new { UserId = userId, RoleCode = roleCode });
+    }
+
+    private const string InsertUserSql = """
+        INSERT INTO users (id, username, email, password_hash, full_name, is_email_verified, created_at, updated_at)
+        VALUES (@Id, @Username, @Email, @PasswordHash, @FullName, @IsEmailVerified, @CreatedAt, @UpdatedAt);
+        """;
+
+    private const string InsertRoleSql = """
+        INSERT INTO user_roles (user_id, role_id)
+        SELECT @UserId, r.id
+        FROM rf_roles r
+        WHERE UPPER(r.code) = UPPER(@RoleCode)
+        ON CONFLICT (user_id, role_id) DO NOTHING;
+        """;
+
+    private const string InsertExternalLoginSql = """
+        INSERT INTO user_external_logins (id, user_id, provider, provider_user_id, email, created_at, last_login_at)
+        VALUES (@Id, @UserId, @Provider, @ProviderUserId, @Email, @CreatedAt, @LastLoginAt);
+        """;
+
+    public async Task<User?> GetByExternalLoginAsync(string provider, string providerUserId)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = """
+            SELECT
+                u.id AS Id,
+                u.username AS Username,
+                u.email AS Email,
+                u.password_hash AS PasswordHash,
+                u.full_name AS FullName,
+                u.is_email_verified AS IsEmailVerified,
+                u.created_at AS CreatedAt,
+                u.updated_at AS UpdatedAt
+            FROM user_external_logins el
+            JOIN users u ON u.id = el.user_id
+            WHERE el.provider = @Provider AND el.provider_user_id = @ProviderUserId;
+            """;
+
+        return await connection.QuerySingleOrDefaultAsync<User>(sql, new { Provider = provider, ProviderUserId = providerUserId });
+    }
+
+    public async Task AddExternalLoginAsync(UserExternalLogin login)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(InsertExternalLoginSql, login);
+    }
+
+    public async Task TouchExternalLoginAsync(string provider, string providerUserId)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = """
+            UPDATE user_external_logins
+            SET last_login_at = @Now
+            WHERE provider = @Provider AND provider_user_id = @ProviderUserId;
+            """;
+
+        await connection.ExecuteAsync(sql, new { Provider = provider, ProviderUserId = providerUserId, Now = DateTime.UtcNow });
+    }
+
+    public async Task CreateWithExternalLoginAsync(User user, string roleCode, UserExternalLogin login)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        await connection.ExecuteAsync(InsertUserSql, user, transaction);
+        await connection.ExecuteAsync(InsertRoleSql, new { UserId = user.Id, RoleCode = roleCode }, transaction);
+        await connection.ExecuteAsync(InsertExternalLoginSql, login, transaction);
+
+        transaction.Commit();
     }
 }

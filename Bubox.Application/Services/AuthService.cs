@@ -15,9 +15,11 @@ public partial class AuthService(
     IPasswordHasher passwordHasher,
     IJwtProvider jwtProvider,
     IEmailSender emailSender,
+    IGoogleTokenVerifier googleTokenVerifier,
     ILogger<AuthService> logger) : IAuthService
 {
     private static readonly Regex UsernameRegex = new(@"^[a-zA-Z0-9_]{3,30}$", RegexOptions.Compiled);
+    private static readonly Regex UsernameInvalidChars = new(@"[^a-z0-9_]", RegexOptions.Compiled);
 
     public async Task<MessageResponse> RegisterAsync(RegisterRequest request)
     {
@@ -68,7 +70,18 @@ public partial class AuthService(
     {
         var identifier = request.Email.Trim().ToLowerInvariant();
         var user = await userRepository.GetByIdentifierAsync(identifier);
-        if (user == null || !passwordHasher.Verify(request.Password, user.PasswordHash))
+        if (user == null)
+        {
+            throw new InvalidCredentialsException();
+        }
+
+        // Akun yang dibuat lewat Google belum punya kata sandi.
+        if (user.PasswordHash is null)
+        {
+            throw new PasswordNotSetException();
+        }
+
+        if (!passwordHasher.Verify(request.Password, user.PasswordHash))
         {
             throw new InvalidCredentialsException();
         }
@@ -77,6 +90,85 @@ public partial class AuthService(
         {
             throw new EmailNotVerifiedException();
         }
+
+        return await BuildAuthResponseAsync(user);
+    }
+
+    public async Task<AuthResponse> GoogleLoginAsync(GoogleLoginRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.IdToken))
+        {
+            throw new InvalidGoogleTokenException();
+        }
+
+        var identity = await googleTokenVerifier.VerifyAsync(request.IdToken)
+            ?? throw new InvalidGoogleTokenException();
+
+        if (!identity.EmailVerified || string.IsNullOrWhiteSpace(identity.Email))
+        {
+            throw new InvalidGoogleTokenException("Email akun Google ini belum terverifikasi oleh Google.");
+        }
+
+        const string provider = ExternalLoginProviders.Google;
+
+        // 1. Akun Google sudah tertaut: langsung masuk.
+        var linked = await userRepository.GetByExternalLoginAsync(provider, identity.Subject);
+        if (linked is not null)
+        {
+            await userRepository.TouchExternalLoginAsync(provider, identity.Subject);
+            return await BuildAuthResponseAsync(linked);
+        }
+
+        var email = NormalizeEmail(identity.Email);
+        var now = DateTime.UtcNow;
+        var link = new UserExternalLogin
+        {
+            Id = Guid.NewGuid(),
+            Provider = provider,
+            ProviderUserId = identity.Subject,
+            Email = email,
+            CreatedAt = now,
+            LastLoginAt = now
+        };
+
+        // 2. Email sudah terdaftar: tautkan akun Google ke akun tersebut.
+        var existing = await userRepository.GetByEmailAsync(email);
+        if (existing is not null)
+        {
+            link.UserId = existing.Id;
+            await userRepository.AddExternalLoginAsync(link);
+
+            if (!existing.IsEmailVerified)
+            {
+                // Akun belum terverifikasi bisa saja didaftarkan orang lain dengan email ini.
+                // Google membuktikan pemilik email yang sebenarnya, jadi kata sandi lama dihapus
+                // agar pendaftar sebelumnya tidak bisa masuk. Pemilik bisa membuat kata sandi baru
+                // lewat "Lupa password".
+                await userRepository.UpdatePasswordAsync(existing.Id, null);
+                await userRepository.SetEmailVerifiedAsync(existing.Id);
+                existing.IsEmailVerified = true;
+                logger.LogInformation("Akun {UserId} belum terverifikasi; ditautkan ke Google dan kata sandi lama dihapus", existing.Id);
+            }
+
+            return await BuildAuthResponseAsync(existing);
+        }
+
+        // 3. Pengguna baru: buat akun yang langsung terverifikasi, tanpa kata sandi.
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Username = await GenerateUniqueUsernameAsync(email),
+            Email = email,
+            FullName = string.IsNullOrWhiteSpace(identity.Name) ? email.Split('@')[0] : identity.Name.Trim(),
+            PasswordHash = null,
+            IsEmailVerified = true,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        link.UserId = user.Id;
+
+        await userRepository.CreateWithExternalLoginAsync(user, RoleConstants.Codes.Customer, link);
+        logger.LogInformation("Akun baru {UserId} dibuat lewat login Google", user.Id);
 
         return await BuildAuthResponseAsync(user);
     }
@@ -153,6 +245,30 @@ public partial class AuthService(
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
+
+    /// <summary>Username dari bagian depan email (budi.santoso@gmail.com → budisantoso), diberi angka bila sudah dipakai.</summary>
+    private async Task<string> GenerateUniqueUsernameAsync(string email)
+    {
+        var baseName = UsernameInvalidChars.Replace(email.Split('@')[0].ToLowerInvariant(), string.Empty);
+        if (baseName.Length > 20) baseName = baseName[..20];
+        if (baseName.Length < 3) baseName = $"user{baseName}";
+
+        if (await userRepository.GetByUsernameAsync(baseName) is null)
+        {
+            return baseName;
+        }
+
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            var candidate = $"{baseName}{Random.Shared.Next(1000, 9999)}";
+            if (await userRepository.GetByUsernameAsync(candidate) is null)
+            {
+                return candidate;
+            }
+        }
+
+        return $"{baseName}{Guid.NewGuid():N}"[..30];
+    }
 
     private async Task<AuthResponse> BuildAuthResponseAsync(User user)
     {
