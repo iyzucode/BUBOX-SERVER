@@ -46,6 +46,36 @@ public class MenuService(
         return result;
     }
 
+    public async Task<MenuImageResult?> GetMenuImageAsync(Guid id)
+    {
+        var image = await menuRepository.GetImageAsync(id);
+        if (string.IsNullOrWhiteSpace(image)) return null;
+
+        // Gambar disimpan sebagai data URL: "data:image/jpeg;base64,...."
+        if (image.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            var commaIndex = image.IndexOf(',');
+            var header = commaIndex > 5 ? image[5..commaIndex] : string.Empty;
+            if (commaIndex < 0 || !header.EndsWith(";base64", StringComparison.OrdinalIgnoreCase)) return null;
+
+            var contentType = header[..^";base64".Length];
+            if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)) return null;
+
+            try
+            {
+                return new MenuImageResult(Convert.FromBase64String(image[(commaIndex + 1)..]), contentType, null);
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
+        }
+
+        return Uri.TryCreate(image, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
+            ? new MenuImageResult(null, null, uri.ToString())
+            : null;
+    }
+
     public async Task<MasterMenuDto?> GetMasterMenuByIdAsync(Guid id)
     {
         var menu = await menuRepository.GetByIdAsync(id);

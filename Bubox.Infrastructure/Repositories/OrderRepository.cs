@@ -140,8 +140,10 @@ public class OrderRepository(IDbConnectionFactory connectionFactory) : IOrderRep
 
         using var connection = connectionFactory.CreateConnection();
         var sql = $"""
-            SELECT {OrderSql.ItemColumns}
+            SELECT {OrderSql.ItemColumns},
+                   CASE WHEN m.image_url IS NOT NULL AND m.image_url <> '' THEN m.updated_at END AS MenuImageUpdatedAt
             FROM order_items i
+            LEFT JOIN menus m ON m.id = i.menu_id
             WHERE i.order_day_id = ANY(@DayIds)
             ORDER BY i.category_name ASC, i.menu_name ASC;
             """;

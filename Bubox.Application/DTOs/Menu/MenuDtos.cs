@@ -80,3 +80,6 @@ public record WeeklyMenuScheduleResponse(
     List<DayMenuScheduleDto> Days,
     int TotalMenus
 );
+
+/// <summary>Gambar menu untuk endpoint publik: bytes (dari data URL) atau URL eksternal untuk redirect.</summary>
+public record MenuImageResult(byte[]? Data, string? ContentType, string? RedirectUrl);

@@ -119,6 +119,13 @@ public class MenuRepository(IDbConnectionFactory connectionFactory) : IMenuRepos
         return await connection.QuerySingleOrDefaultAsync<Menu>(sql, new { Id = id });
     }
 
+    public async Task<string?> GetImageAsync(Guid id)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = "SELECT image_url FROM menus WHERE id = @Id;";
+        return await connection.QuerySingleOrDefaultAsync<string?>(sql, new { Id = id });
+    }
+
     public async Task<IEnumerable<Menu>> GetAllMasterMenusAsync(Guid? categoryId = null, string? search = null, bool includeInactive = false)
     {
         using var connection = connectionFactory.CreateConnection();

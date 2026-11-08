@@ -109,7 +109,9 @@ public record OrderItemDto(
     string CategoryName,
     decimal UnitPrice,
     int Qty,
-    decimal LineTotal
+    decimal LineTotal,
+    /// <summary>Path relatif gambar menu (berversi), null bila menu tanpa gambar.</summary>
+    string? ImageUrl
 );
 
 public record OrderDayDto(

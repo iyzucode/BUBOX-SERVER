@@ -1,6 +1,7 @@
 using Bubox.Application.DTOs.Menu;
 using Bubox.Application.Exceptions;
 using Bubox.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bubox.Api.Controllers;
@@ -37,6 +38,30 @@ public class MenuController(IMenuService menuService) : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Gambar menu sebagai file (bukan base64 di JSON). URL dari server selalu berversi (?v=…),
+    /// jadi aman di-cache lama; berganti otomatis saat menu diperbarui.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("Image/{menuId:guid}")]
+    public async Task<IActionResult> GetImage(Guid menuId)
+    {
+        var image = await menuService.GetMenuImageAsync(menuId);
+        if (image is null)
+        {
+            return NotFound();
+        }
+
+        if (image.RedirectUrl is not null)
+        {
+            return Redirect(image.RedirectUrl);
+        }
+
+        Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        Response.Headers.XContentTypeOptions = "nosniff";
+        return File(image.Data!, image.ContentType!);
     }
 
     // ==========================================

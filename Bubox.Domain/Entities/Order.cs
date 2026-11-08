@@ -53,6 +53,9 @@ public class OrderItem
     public int Qty { get; set; }
     public decimal LineTotal { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Waktu update menu bila menu punya gambar (untuk URL berversi); null = tanpa gambar. Tidak disimpan.</summary>
+    public DateTime? MenuImageUpdatedAt { get; set; }
 }
 
 public class OrderStatusHistory

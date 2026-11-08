@@ -62,8 +62,14 @@ internal static class OrderMapper
         CategoryName: i.CategoryName,
         UnitPrice: i.UnitPrice,
         Qty: i.Qty,
-        LineTotal: i.LineTotal
+        LineTotal: i.LineTotal,
+        ImageUrl: i.MenuImageUpdatedAt is { } updatedAt
+            ? $"{MenuImagePathPrefix}{i.MenuId}?v={updatedAt.ToUniversalTime().Ticks}"
+            : null
     );
+
+    /// <summary>Path endpoint gambar menu (MenuController.GetImage).</summary>
+    public const string MenuImagePathPrefix = "/api/Menu/Image/";
 
     public static QrisPaymentDto ToDto(Payment p, bool includeQr) => new(
         QrString: includeQr ? p.QrString : null,

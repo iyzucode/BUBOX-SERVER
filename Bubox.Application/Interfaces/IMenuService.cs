@@ -7,6 +7,7 @@ public interface IMenuService
     // Master Menu Catalog
     Task<IEnumerable<MasterMenuDto>> GetMasterMenusAsync(Guid? categoryId = null, string? search = null, bool includeInactive = false);
     Task<MasterMenuDto?> GetMasterMenuByIdAsync(Guid id);
+    Task<MenuImageResult?> GetMenuImageAsync(Guid id);
     Task<Guid> CreateMasterMenuAsync(CreateMasterMenuRequest request);
     Task UpdateMasterMenuAsync(Guid id, UpdateMasterMenuRequest request);
     Task DeleteMasterMenuAsync(Guid id);
