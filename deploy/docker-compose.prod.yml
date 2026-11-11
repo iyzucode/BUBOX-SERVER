@@ -50,6 +50,8 @@ services:
       Email__FromAddress: ${EMAIL_FROM_ADDRESS:?EMAIL_FROM_ADDRESS wajib diisi di .env}
       Email__Smtp__Password: ${RESEND_API_KEY:-}
       GoogleMaps__ServerApiKey: ${GOOGLE_MAPS_SERVER_KEY:-}
+      # Client ID yang sama dengan web: API hanya menerima ID token Google untuk client ini.
+      Google__ClientIds__0: ${GOOGLE_WEB_CLIENT_ID:?GOOGLE_WEB_CLIENT_ID wajib diisi di .env}
     # Tidak ada "ports": API hanya bisa dicapai lewat Caddy. Ini juga yang membuat header
     # X-Forwarded-For aman dipercaya (lihat ForwardedHeaders di Program.cs).
     networks: [backend, edge]
