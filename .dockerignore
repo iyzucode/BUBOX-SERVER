@@ -1,0 +1,16 @@
+# Konteks build image API: hanya source yang dibutuhkan.
+**/bin/
+**/obj/
+**/*.user
+.git/
+.vs/
+.idea/
+.vscode/
+deploy/
+docs/
+SQL/
+*.md
+# Rahasia lokal: JANGAN masuk image (produksi memakai environment variable).
+**/configuration.Development.yml
+**/configuration.*.local.yml
+**/.env

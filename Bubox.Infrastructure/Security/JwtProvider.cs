@@ -12,8 +12,9 @@ public class JwtProvider(IConfiguration configuration) : IJwtProvider
 {
     public string GenerateToken(User user, IEnumerable<string> roles)
     {
+        // Sudah divalidasi saat startup (JwtKeyGuard di Bubox.Api); tanpa fallback.
         var key = configuration["Jwt:Key"]
-            ?? "DefaultFallbackSuperSecretKeyBubox2026!MustBeAtLeast32Chars";
+            ?? throw new InvalidOperationException("Jwt:Key belum diisi.");
         var issuer = configuration["Jwt:Issuer"] ?? "Bubox.Api";
         var audience = configuration["Jwt:Audience"] ?? "Bubox.Client";
         var expiryMinutes = int.TryParse(configuration["Jwt:ExpiryMinutes"], out var exp) ? exp : 1440; // 1 day default

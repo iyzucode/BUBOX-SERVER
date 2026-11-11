@@ -5,11 +5,17 @@ Logging:
 
 AllowedHosts: "*"
 
+# Origin lain yang boleh memanggil API dari browser. Produksi web & API satu domain, jadi
+# biasanya cukup domain itu (env Cors__AllowedOrigins__0). Kosong di Development = semua.
+Cors:
+  AllowedOrigins: []
+
 ConnectionStrings:
   DefaultConnection: "Host=localhost;Port=5432;Database=bubox_db;Username=postgres;Password=postgres;"
 
+# Key RAHASIA, tidak di repo: produksi lewat env Jwt__Key (acak, min. 32 karakter);
+# lokal di configuration.Development.yml. API menolak jalan bila kosong.
 Jwt:
-  Key: "SuperSecretKeyForBuboxPlatformAuthentication2026!MustBe32CharsLong"
   Issuer: "Bubox.Api"
   Audience: "Bubox.Client"
   ExpiryMinutes: 1440

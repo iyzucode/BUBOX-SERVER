@@ -30,3 +30,7 @@ Thumbs.db
 
 ## Konfigurasi lokal per-environment (berisi secret, jangan di-commit)
 Bubox.Api/configuration.*.yml
+
+## Rahasia produksi (deploy/.env.example yang di-commit)
+deploy/.env
+deploy/backups/

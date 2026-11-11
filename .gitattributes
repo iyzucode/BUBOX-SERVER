@@ -1,0 +1,5 @@
+# Script & config yang dijalankan di Linux (VPS) wajib LF.
+*.sh text eol=lf
+deploy/Caddyfile text eol=lf
+deploy/*.yml text eol=lf
+deploy/.env.example text eol=lf

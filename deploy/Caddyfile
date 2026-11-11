@@ -1,0 +1,35 @@
+# Caddy: sertifikat HTTPS (Let's Encrypt) diurus otomatis, termasuk perpanjangan.
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Batas ukuran body (foto profil maks. 2 MB, gambar menu base64 ±1,4 MB).
+	request_body {
+		max_size 5MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+		-Server
+	}
+
+	# API .NET (tidak terekspos langsung). Caddy mengirim X-Forwarded-For/Proto otomatis.
+	handle /api/* {
+		reverse_proxy api:5073
+	}
+
+	# Aplikasi web (Expo static via nginx).
+	handle {
+		reverse_proxy web:80
+	}
+}
+
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}

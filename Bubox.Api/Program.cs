@@ -7,6 +7,7 @@ using Bubox.Api.Middlewares;
 using Bubox.Application;
 using Bubox.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -52,20 +53,38 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// CORS configuration
+// CORS: daftar origin dari konfigurasi (Cors:AllowedOrigins). Produksi web & API satu domain,
+// jadi daftar ini hanya untuk origin lain yang memang diizinkan. Kosong + Development = izinkan semua.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins);
+        }
+        else if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin();
+        }
+
+        policy.AllowAnyHeader().AllowAnyMethod();
     });
 });
 
-// JWT Authentication setup
-var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? "SuperSecretKeyForBuboxPlatformAuthentication2026!MustBe32CharsLong";
+// Di belakang reverse proxy (Caddy): baca IP & skema asli dari X-Forwarded-*.
+// Port API tidak dibuka ke internet (hanya jaringan Docker), jadi header dari proxy dipercaya.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// JWT Authentication setup: key WAJIB dari konfigurasi (env Jwt__Key di produksi), tanpa fallback.
+var jwtKey = JwtKeyGuard.Require(builder.Configuration, builder.Environment);
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "Bubox.Api";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "Bubox.Client";
 
@@ -92,7 +111,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // Rate limiting endpoint auth per alamat IP (melindungi OTP dari tebak paksa & spam email).
-// Catatan: di belakang reverse proxy, aktifkan ForwardedHeaders agar IP asli yang terbaca.
+// IP asli dari proxy dibaca lewat UseForwardedHeaders di bawah.
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -124,6 +143,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHostedService<OrderExpiryHostedService>();
 
 var app = builder.Build();
+
+// Harus paling awal: IP asli dipakai rate limiter & log.
+app.UseForwardedHeaders();
 
 // Global Exception Handler Middleware
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();

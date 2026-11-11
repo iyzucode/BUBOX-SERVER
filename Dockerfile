@@ -21,4 +21,7 @@ COPY --from=build /app/publish .
 ENV ASPNETCORE_URLS=http://+:5073
 EXPOSE 5073
 
+# Jalan sebagai user non-root bawaan image aspnet (UID 1654).
+USER $APP_UID
+
 ENTRYPOINT ["dotnet", "Bubox.Api.dll"]
