@@ -18,7 +18,9 @@ public record AddressDto(
     string? WilayahCode,
     bool IsPrimary,
     DateTime CreatedAt,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    // Alamat ini bisa dipesan antar (berdasarkan area pengantaran yang diatur admin)
+    bool IsDeliveryCovered = false
 );
 
 public record CreateAddressRequest(

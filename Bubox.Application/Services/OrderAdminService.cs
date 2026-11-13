@@ -109,6 +109,12 @@ public class OrderAdminService(
         }
 
         await statusEngine.ChangeDayStatusAsync(uow, day, target, actor, null, nowUtc);
+
+        // Berangkat: bekukan zona & driver saat ini supaya riwayat tidak ikut berubah bila pemetaan diganti
+        if (target == OrderDayStatusCodes.OutForDelivery && await uow.DispatchDayAsync(day.Id, nowUtc) == null)
+        {
+            throw new DriverNotAssignedException();
+        }
         await statusEngine.SyncOrderWithDaysAsync(uow, order, days, actor.UserId, nowUtc);
         await uow.CommitAsync();
     }
@@ -204,7 +210,11 @@ public class OrderAdminService(
             StatusCode: r.StatusCode,
             Address: OrderMapper.DeserializeAddress(r.AddressSnapshot),
             Notes: r.Notes,
-            Items: items.TryGetValue(r.OrderDayId, out var list) ? list : [])).ToList();
+            Items: items.TryGetValue(r.OrderDayId, out var list) ? list : [],
+            ZoneName: r.ZoneName,
+            DriverUserId: r.DriverUserId,
+            DriverName: r.DriverName,
+            AssignmentSource: r.AssignmentSource)).ToList();
     }
 
     private static string RequireReason(string? reason)

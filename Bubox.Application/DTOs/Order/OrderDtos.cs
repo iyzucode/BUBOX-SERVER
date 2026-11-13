@@ -74,7 +74,9 @@ public record AddressSnapshotDto(
     string PostalCode,
     string? Notes,
     double? Latitude,
-    double? Longitude
+    double? Longitude,
+    // Kode wilayah rf_wilayah (paling spesifik yang diketahui); null pada pesanan lama
+    string? WilayahCode = null
 );
 
 public record OrderSummaryDto(
@@ -179,7 +181,12 @@ public record DailyOrderDayDto(
     string StatusCode,
     AddressSnapshotDto? Address,
     string? Notes,
-    IReadOnlyList<OrderItemDto> Items
+    IReadOnlyList<OrderItemDto> Items,
+    // Pengantaran (DELIVERY saja): zona & driver efektif. AssignmentSource: DISPATCHED | MANUAL | ZONE | UNASSIGNED
+    string? ZoneName = null,
+    Guid? DriverUserId = null,
+    string? DriverName = null,
+    string? AssignmentSource = null
 );
 
 public record DailyProductionDto(

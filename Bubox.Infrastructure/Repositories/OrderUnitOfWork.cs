@@ -81,11 +81,11 @@ public sealed class OrderUnitOfWork(IDbConnection connection, IDbTransaction tra
         const string sql = """
             INSERT INTO orders (
                 id, order_number, user_id, status_code, fulfillment_type, address_id, address_snapshot,
-                subtotal, discount_amount, voucher_code, delivery_fee, grand_total, notes, payment_due_at,
+                delivery_wilayah_code, subtotal, discount_amount, voucher_code, delivery_fee, grand_total, notes, payment_due_at,
                 created_at, updated_at)
             VALUES (
                 @Id, @OrderNumber, @UserId, @StatusCode, @FulfillmentType, @AddressId, @AddressSnapshot::jsonb,
-                @Subtotal, @DiscountAmount, @VoucherCode, @DeliveryFee, @GrandTotal, @Notes, @PaymentDueAt,
+                @DeliveryWilayahCode, @Subtotal, @DiscountAmount, @VoucherCode, @DeliveryFee, @GrandTotal, @Notes, @PaymentDueAt,
                 @CreatedAt, @UpdatedAt);
             """;
 
@@ -257,6 +257,23 @@ public sealed class OrderUnitOfWork(IDbConnection connection, IDbTransaction tra
             """;
 
         await connection.ExecuteAsync(sql, new { OrderId = orderId, Now = nowUtc }, transaction);
+    }
+
+    public async Task<Guid?> DispatchDayAsync(Guid orderDayId, DateTime nowUtc)
+    {
+        // Bekukan zona & driver efektif saat ini, agar riwayat tidak berubah bila pemetaan diganti
+        const string sql = """
+            UPDATE order_days d
+            SET dispatched_zone_id = a.zone_id,
+                dispatched_zone_name = a.zone_name,
+                dispatched_driver_user_id = a.driver_user_id,
+                dispatched_at = @Now
+            FROM v_order_day_delivery_assignments a
+            WHERE a.order_day_id = d.id AND d.id = @Id AND d.dispatched_at IS NULL
+            RETURNING d.dispatched_driver_user_id;
+            """;
+
+        return await connection.QuerySingleOrDefaultAsync<Guid?>(sql, new { Id = orderDayId, Now = nowUtc }, transaction);
     }
 
     public Task CommitAsync()

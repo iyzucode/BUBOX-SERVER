@@ -37,6 +37,13 @@ public class OrderDayScheduleRow
     public string FulfillmentType { get; set; } = string.Empty;
     public string? AddressSnapshot { get; set; }
     public string? Notes { get; set; }
+
+    // Penugasan pengantaran efektif (hanya DELIVERY; lihat v_order_day_delivery_assignments)
+    public Guid? ZoneId { get; set; }
+    public string? ZoneName { get; set; }
+    public Guid? DriverUserId { get; set; }
+    public string? DriverName { get; set; }
+    public string? AssignmentSource { get; set; }
 }
 
 public class OrderSearchFilter
@@ -139,6 +146,12 @@ public interface IOrderUnitOfWork : IAsyncDisposable
 
     /// <summary>Lepas pemakaian voucher pesanan ini (pesanan ditutup sebelum dibayar), agar bisa dipakai lagi.</summary>
     Task ReleaseVoucherRedemptionAsync(Guid orderId, DateTime nowUtc);
+
+    /// <summary>
+    /// Bekukan zona & driver efektif hari kirim (saat "Dibawa kurir"). Mengembalikan driver yang
+    /// dibekukan; null bila hari itu belum punya driver.
+    /// </summary>
+    Task<Guid?> DispatchDayAsync(Guid orderDayId, DateTime nowUtc);
 
     Task CommitAsync();
 }

@@ -57,6 +57,12 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
             VoucherNotApplicableException ex => (StatusCodes.Status400BadRequest, "VOUCHER_NOT_APPLICABLE", ex.Message),
             InvalidVoucherException ex => (StatusCodes.Status400BadRequest, "INVALID_VOUCHER", ex.Message),
             VoucherCodeExistsException ex => (StatusCodes.Status409Conflict, "VOUCHER_CODE_EXISTS", ex.Message),
+            DeliveryNotCoveredException ex => (StatusCodes.Status400BadRequest, "DELIVERY_NOT_COVERED", ex.Message),
+            InvalidDeliverySettingException ex => (StatusCodes.Status400BadRequest, "INVALID_DELIVERY_SETTING", ex.Message),
+            DeliveryZoneNotFoundException ex => (StatusCodes.Status404NotFound, "DELIVERY_ZONE_NOT_FOUND", ex.Message),
+            DeliveryZoneCodeExistsException ex => (StatusCodes.Status409Conflict, "DELIVERY_ZONE_CODE_EXISTS", ex.Message),
+            DeliveryZoneNotEmptyException ex => (StatusCodes.Status409Conflict, "DELIVERY_ZONE_NOT_EMPTY", ex.Message),
+            DriverNotAssignedException ex => (StatusCodes.Status409Conflict, "DRIVER_NOT_ASSIGNED", ex.Message),
             UnauthorizedAccessException ex => (StatusCodes.Status401Unauthorized, "UNAUTHORIZED", ex.Message),
             _ => (StatusCodes.Status500InternalServerError, "INTERNAL_SERVER_ERROR", "Terjadi kesalahan pada server.")
         };

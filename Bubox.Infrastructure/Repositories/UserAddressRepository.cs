@@ -111,6 +111,13 @@ public class UserAddressRepository(IDbConnectionFactory connectionFactory) : IUs
         }
     }
 
+    public async Task UpdateWilayahCodeAsync(Guid addressId, string wilayahCode)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = "UPDATE user_addresses SET wilayah_code = @Code WHERE id = @Id;";
+        await connection.ExecuteAsync(sql, new { Id = addressId, Code = wilayahCode });
+    }
+
     public async Task UpdateAsync(UserAddress address)
     {
         using var connection = connectionFactory.CreateConnection();

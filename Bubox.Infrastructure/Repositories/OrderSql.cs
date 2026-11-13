@@ -11,6 +11,7 @@ internal static class OrderSql
         o.fulfillment_type AS FulfillmentType,
         o.address_id AS AddressId,
         o.address_snapshot::text AS AddressSnapshot,
+        o.delivery_wilayah_code AS DeliveryWilayahCode,
         o.subtotal AS Subtotal,
         o.discount_amount AS DiscountAmount,
         o.voucher_code AS VoucherCode,

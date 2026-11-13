@@ -18,6 +18,7 @@ public class OrderService(
     ISettingsService settingsService,
     IPaymentGateway paymentGateway,
     IVoucherService voucherService,
+    DeliveryCoverageService coverageService,
     OrderStatusEngine statusEngine) : IOrderService
 {
     private const string OrderNumberAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -77,9 +78,10 @@ public class OrderService(
                 $"Pemesanan hanya bisa untuk {OrderLimits.MaxAdvanceDays} hari ke depan (paling lambat {latestDate:dd-MM-yyyy}).");
         }
 
-        // 3. Alamat (snapshot) untuk DELIVERY
+        // 3. Alamat (snapshot) untuk DELIVERY, wajib di dalam area pengantaran
         Guid? addressId = null;
         string? addressSnapshot = null;
+        string? deliveryWilayahCode = null;
         if (fulfillmentType == FulfillmentTypes.Delivery)
         {
             if (request.AddressId is null || request.AddressId == Guid.Empty)
@@ -90,11 +92,23 @@ public class OrderService(
             var address = await addressRepository.GetByIdAsync(request.AddressId.Value, userId)
                 ?? throw new InvalidOrderException("Alamat pengiriman tidak ditemukan.");
 
+            deliveryWilayahCode = await coverageService.EnsureWilayahCodeAsync(address);
+            if (deliveryWilayahCode == null)
+            {
+                throw new DeliveryNotCoveredException(
+                    "Wilayah alamat ini tidak dikenali. Ubah alamat dan pilih kecamatan & kelurahan dari daftar.");
+            }
+
+            if (!await coverageService.IsCoveredAsync(deliveryWilayahCode))
+            {
+                throw new DeliveryNotCoveredException();
+            }
+
             addressId = address.Id;
             addressSnapshot = OrderMapper.SerializeAddress(new AddressSnapshotDto(
                 address.Id, address.Label, address.RecipientName, address.PhoneNumber, address.FullAddress,
                 address.Subdistrict, address.City, address.Province, address.PostalCode, address.Notes,
-                address.Latitude, address.Longitude));
+                address.Latitude, address.Longitude, deliveryWilayahCode));
         }
 
         // 4. Harga dihitung ulang dari jadwal menu aktif (bukan dari client)
@@ -208,6 +222,7 @@ public class OrderService(
             FulfillmentType = fulfillmentType,
             AddressId = addressId,
             AddressSnapshot = addressSnapshot,
+            DeliveryWilayahCode = deliveryWilayahCode,
             Subtotal = subtotal,
             DiscountAmount = discountAmount,
             VoucherCode = voucher?.Voucher.Code,

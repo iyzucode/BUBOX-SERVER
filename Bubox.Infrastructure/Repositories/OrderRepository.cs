@@ -188,10 +188,17 @@ public class OrderRepository(IDbConnectionFactory connectionFactory) : IOrderRep
                 d.status_code AS StatusCode,
                 o.fulfillment_type AS FulfillmentType,
                 o.address_snapshot::text AS AddressSnapshot,
-                o.notes AS Notes
+                o.notes AS Notes,
+                a.zone_id AS ZoneId,
+                a.zone_name AS ZoneName,
+                a.driver_user_id AS DriverUserId,
+                du.full_name AS DriverName,
+                a.assignment_source AS AssignmentSource
             FROM order_days d
             JOIN orders o ON o.id = d.order_id
             JOIN users u ON u.id = o.user_id
+            LEFT JOIN v_order_day_delivery_assignments a ON a.order_day_id = d.id
+            LEFT JOIN users du ON du.id = a.driver_user_id
             WHERE d.delivery_date = @DeliveryDate::date
               AND d.status_code = ANY(@StatusCodes)
               AND (@FulfillmentType::text IS NULL OR o.fulfillment_type = @FulfillmentType::text)

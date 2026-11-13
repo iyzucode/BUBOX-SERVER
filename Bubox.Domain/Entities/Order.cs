@@ -9,6 +9,8 @@ public class Order
     public string FulfillmentType { get; set; } = string.Empty;
     public Guid? AddressId { get; set; }
     public string? AddressSnapshot { get; set; } // JSON
+    /// <summary>Kode wilayah alamat antar (rf_wilayah, paling spesifik yang diketahui). Dasar zona & driver.</summary>
+    public string? DeliveryWilayahCode { get; set; }
     public decimal Subtotal { get; set; }
     public decimal DiscountAmount { get; set; }
     /// <summary>Kode voucher yang dipakai (snapshot), null bila tanpa voucher.</summary>

@@ -6,12 +6,27 @@ using Bubox.Domain.Interfaces;
 
 namespace Bubox.Application.Services;
 
-public class AddressService(IUserAddressRepository addressRepository) : IAddressService
+public class AddressService(
+    IUserAddressRepository addressRepository,
+    WilayahCodeResolver wilayahCodeResolver,
+    DeliveryCoverageService coverageService) : IAddressService
 {
     public async Task<IEnumerable<AddressDto>> GetAddressesAsync(Guid userId)
     {
         var addresses = await addressRepository.GetByUserIdAsync(userId);
-        return addresses.Select(MapToDto);
+        var result = new List<AddressDto>();
+        foreach (var address in addresses)
+        {
+            result.Add(await MapWithCoverageAsync(address));
+        }
+        return result;
+    }
+
+    /// <summary>Lengkapi kode wilayah alamat lama bila perlu, lalu cek jangkauan pengantarannya.</summary>
+    private async Task<AddressDto> MapWithCoverageAsync(UserAddress address)
+    {
+        var code = await coverageService.EnsureWilayahCodeAsync(address);
+        return MapToDto(address) with { IsDeliveryCovered = await coverageService.IsCoveredAsync(code) };
     }
 
     public async Task<AddressDto> GetDetailAddressAsync(Guid id, Guid userId)
@@ -19,7 +34,7 @@ public class AddressService(IUserAddressRepository addressRepository) : IAddress
         var address = await addressRepository.GetByIdAsync(id, userId)
             ?? throw new AddressNotFoundException();
 
-        return MapToDto(address);
+        return await MapWithCoverageAsync(address);
     }
 
     public async Task<AddressDto> SaveAddressAsync(Guid userId, CreateAddressRequest request)
@@ -43,14 +58,16 @@ public class AddressService(IUserAddressRepository addressRepository) : IAddress
             Latitude = request.Latitude,
             Longitude = request.Longitude,
             PlaceId = NormalizePlaceId(request.PlaceId),
-            WilayahCode = NormalizeWilayahCode(request.WilayahCode),
+            // Kelurahan dari daftar wilayah; bila tidak ada, dicocokkan dari nama provinsi/kota/kecamatan
+            WilayahCode = NormalizeWilayahCode(request.WilayahCode)
+                ?? await wilayahCodeResolver.ResolveAsync(request.Province, request.City, request.Subdistrict),
             IsPrimary = isPrimary,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
 
         await addressRepository.CreateAsync(address);
-        return MapToDto(address);
+        return await MapWithCoverageAsync(address);
     }
 
     public async Task<AddressDto> UpdateAddressAsync(Guid id, Guid userId, UpdateAddressRequest request)
@@ -72,12 +89,14 @@ public class AddressService(IUserAddressRepository addressRepository) : IAddress
         address.Latitude = request.Latitude ?? address.Latitude;
         address.Longitude = request.Longitude ?? address.Longitude;
         address.PlaceId = NormalizePlaceId(request.PlaceId) ?? address.PlaceId;
-        address.WilayahCode = NormalizeWilayahCode(request.WilayahCode) ?? address.WilayahCode;
+        // Nama wilayah bisa berubah: cocokkan ulang bila kelurahan tidak dipilih dari daftar
+        address.WilayahCode = NormalizeWilayahCode(request.WilayahCode)
+            ?? await wilayahCodeResolver.ResolveAsync(address.Province, address.City, address.Subdistrict);
         address.IsPrimary = isPrimary;
         address.UpdatedAt = DateTime.UtcNow;
 
         await addressRepository.UpdateAsync(address);
-        return MapToDto(address);
+        return await MapWithCoverageAsync(address);
     }
 
     public async Task SetPrimaryAddressAsync(Guid id, Guid userId)

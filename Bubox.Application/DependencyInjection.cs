@@ -20,6 +20,9 @@ public static class DependencyInjection
         services.AddScoped<IOrderAdminService, OrderAdminService>();
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IVoucherService, VoucherService>();
+        services.AddScoped<WilayahCodeResolver>();
+        services.AddScoped<DeliveryCoverageService>();
+        services.AddScoped<IDeliveryAdminService, DeliveryAdminService>();
         return services;
     }
 }
