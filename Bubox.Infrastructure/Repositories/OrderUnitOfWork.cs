@@ -81,10 +81,12 @@ public sealed class OrderUnitOfWork(IDbConnection connection, IDbTransaction tra
         const string sql = """
             INSERT INTO orders (
                 id, order_number, user_id, status_code, fulfillment_type, address_id, address_snapshot,
-                subtotal, discount_amount, delivery_fee, grand_total, notes, payment_due_at, created_at, updated_at)
+                subtotal, discount_amount, voucher_code, delivery_fee, grand_total, notes, payment_due_at,
+                created_at, updated_at)
             VALUES (
                 @Id, @OrderNumber, @UserId, @StatusCode, @FulfillmentType, @AddressId, @AddressSnapshot::jsonb,
-                @Subtotal, @DiscountAmount, @DeliveryFee, @GrandTotal, @Notes, @PaymentDueAt, @CreatedAt, @UpdatedAt);
+                @Subtotal, @DiscountAmount, @VoucherCode, @DeliveryFee, @GrandTotal, @Notes, @PaymentDueAt,
+                @CreatedAt, @UpdatedAt);
             """;
 
         await connection.ExecuteAsync(sql, order, transaction);
@@ -211,6 +213,50 @@ public sealed class OrderUnitOfWork(IDbConnection connection, IDbTransaction tra
             """;
 
         await connection.ExecuteAsync(sql, payment, transaction);
+    }
+
+    public async Task<VoucherRedemptionResult> InsertVoucherRedemptionAsync(VoucherRedemption redemption)
+    {
+        // Kunci baris voucher sampai transaksi selesai: pesanan lain yang memakai voucher yang sama
+        // menunggu di sini, jadi hitungan kuota di bawah selalu akurat.
+        const string lockSql = """
+            SELECT usage_limit FROM vouchers WHERE id = @VoucherId FOR UPDATE;
+            """;
+        var usageLimit = await connection.QuerySingleOrDefaultAsync<int?>(lockSql, new { redemption.VoucherId }, transaction);
+
+        if (usageLimit is { } limit)
+        {
+            const string countSql = """
+                SELECT COUNT(*)::int FROM voucher_redemptions
+                WHERE voucher_id = @VoucherId AND released_at IS NULL;
+                """;
+            var used = await connection.ExecuteScalarAsync<int>(countSql, new { redemption.VoucherId }, transaction);
+            if (used >= limit)
+            {
+                return VoucherRedemptionResult.QuotaExhausted;
+            }
+        }
+
+        // ON CONFLICT (bukan menangkap error 23505): error di PostgreSQL membatalkan seluruh transaksi.
+        const string sql = """
+            INSERT INTO voucher_redemptions (id, voucher_id, user_id, order_id, discount_amount, created_at)
+            VALUES (@Id, @VoucherId, @UserId, @OrderId, @DiscountAmount, @CreatedAt)
+            ON CONFLICT (voucher_id, user_id) WHERE released_at IS NULL DO NOTHING;
+            """;
+
+        var affected = await connection.ExecuteAsync(sql, redemption, transaction);
+        return affected == 1 ? VoucherRedemptionResult.Recorded : VoucherRedemptionResult.AlreadyUsed;
+    }
+
+    public async Task ReleaseVoucherRedemptionAsync(Guid orderId, DateTime nowUtc)
+    {
+        const string sql = """
+            UPDATE voucher_redemptions
+            SET released_at = @Now
+            WHERE order_id = @OrderId AND released_at IS NULL;
+            """;
+
+        await connection.ExecuteAsync(sql, new { OrderId = orderId, Now = nowUtc }, transaction);
     }
 
     public Task CommitAsync()

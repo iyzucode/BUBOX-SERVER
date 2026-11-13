@@ -17,6 +17,7 @@ public class OrderService(
     IUserRepository userRepository,
     ISettingsService settingsService,
     IPaymentGateway paymentGateway,
+    IVoucherService voucherService,
     OrderStatusEngine statusEngine) : IOrderService
 {
     private const string OrderNumberAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -173,7 +174,17 @@ public class OrderService(
 
         var subtotal = days.Sum(d => d.DaySubtotal);
         var deliveryFee = fulfillmentType == FulfillmentTypes.Delivery ? settings.DeliveryFee : 0m;
-        var grandTotal = subtotal + deliveryFee;
+
+        // 4b. Voucher (opsional): syarat & potongan dicek ulang di server. Saat ini pesanan selalu QRIS.
+        ResolvedVoucher? voucher = null;
+        if (!string.IsNullOrWhiteSpace(request.VoucherCode))
+        {
+            voucher = await voucherService.ResolveForOrderAsync(
+                userId, request.VoucherCode, subtotal, OrderPaymentMethods.Qris, nowUtc);
+        }
+
+        var discountAmount = voucher?.DiscountAmount ?? 0m;
+        var grandTotal = subtotal - discountAmount + deliveryFee;
 
         if (grandTotal <= 0)
         {
@@ -198,7 +209,8 @@ public class OrderService(
             AddressId = addressId,
             AddressSnapshot = addressSnapshot,
             Subtotal = subtotal,
-            DiscountAmount = 0m,
+            DiscountAmount = discountAmount,
+            VoucherCode = voucher?.Voucher.Code,
             DeliveryFee = deliveryFee,
             GrandTotal = grandTotal,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
@@ -213,6 +225,30 @@ public class OrderService(
             await uow.InsertOrderAsync(order);
             await uow.InsertDaysAsync(days);
             await uow.InsertItemsAsync(items);
+
+            // Dicek ulang di dalam transaksi (voucher dikunci): kuota & 1x per pengguna tetap benar
+            // walau ada klik ganda atau banyak pesanan bersamaan untuk sisa kuota terakhir.
+            if (voucher != null)
+            {
+                var redemption = await uow.InsertVoucherRedemptionAsync(new VoucherRedemption
+                {
+                    Id = Guid.NewGuid(),
+                    VoucherId = voucher.Voucher.Id,
+                    UserId = userId,
+                    OrderId = order.Id,
+                    DiscountAmount = discountAmount,
+                    CreatedAt = nowUtc
+                });
+
+                switch (redemption)
+                {
+                    case VoucherRedemptionResult.QuotaExhausted:
+                        throw new VoucherNotApplicableException("Kuota voucher sudah habis.");
+                    case VoucherRedemptionResult.AlreadyUsed:
+                        throw new VoucherNotApplicableException("Voucher ini sudah kamu pakai.");
+                }
+            }
+
             await uow.InsertHistoryAsync(new OrderStatusHistory
             {
                 Id = Guid.NewGuid(),
@@ -341,6 +377,7 @@ public class OrderService(
             Notes: order.Notes,
             Subtotal: order.Subtotal,
             DiscountAmount: order.DiscountAmount,
+            VoucherCode: order.VoucherCode,
             DeliveryFee: order.DeliveryFee,
             GrandTotal: order.GrandTotal,
             PaymentDueAt: order.PaymentDueAt,

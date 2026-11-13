@@ -103,6 +103,15 @@ public interface IOrderUnitOfWorkFactory
     Task<IOrderUnitOfWork> BeginAsync();
 }
 
+public enum VoucherRedemptionResult
+{
+    Recorded,
+    /// <summary>Pengguna sudah punya pemakaian aktif untuk voucher ini.</summary>
+    AlreadyUsed,
+    /// <summary>Kuota total voucher sudah habis.</summary>
+    QuotaExhausted
+}
+
 public interface IOrderUnitOfWork : IAsyncDisposable
 {
     Task<Order?> LockOrderAsync(Guid orderId);
@@ -121,6 +130,15 @@ public interface IOrderUnitOfWork : IAsyncDisposable
     Task<bool> UpdateDayStatusAsync(Guid dayId, string fromCode, string toCode, DateTime nowUtc, string? cancelReason, Guid? cancelledBy, bool requiresManualRefund);
 
     Task UpdatePaymentAsync(Payment payment);
+
+    /// <summary>
+    /// Catat pemakaian voucher untuk pesanan baru. Baris voucher dikunci dulu (FOR UPDATE) agar kuota
+    /// tidak terlampaui oleh pesanan bersamaan; batas 1x per pengguna dijaga index unik di database.
+    /// </summary>
+    Task<VoucherRedemptionResult> InsertVoucherRedemptionAsync(VoucherRedemption redemption);
+
+    /// <summary>Lepas pemakaian voucher pesanan ini (pesanan ditutup sebelum dibayar), agar bisa dipakai lagi.</summary>
+    Task ReleaseVoucherRedemptionAsync(Guid orderId, DateTime nowUtc);
 
     Task CommitAsync();
 }

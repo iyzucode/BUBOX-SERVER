@@ -11,6 +11,8 @@ public class Order
     public string? AddressSnapshot { get; set; } // JSON
     public decimal Subtotal { get; set; }
     public decimal DiscountAmount { get; set; }
+    /// <summary>Kode voucher yang dipakai (snapshot), null bila tanpa voucher.</summary>
+    public string? VoucherCode { get; set; }
     public decimal DeliveryFee { get; set; }
     public decimal GrandTotal { get; set; }
     public string? Notes { get; set; }

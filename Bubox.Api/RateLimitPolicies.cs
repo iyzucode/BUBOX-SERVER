@@ -5,4 +5,7 @@ public static class RateLimitPolicies
 {
     /// <summary>Endpoint auth: 10 permintaan per menit per IP.</summary>
     public const string Auth = "auth";
+
+    /// <summary>Cek kode voucher: 10 permintaan per menit per pengguna (mencegah menebak kode rahasia).</summary>
+    public const string VoucherCheck = "voucher-check";
 }

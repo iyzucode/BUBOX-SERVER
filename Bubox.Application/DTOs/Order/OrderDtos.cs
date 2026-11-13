@@ -8,7 +8,9 @@ public record CreateOrderRequest(
     string FulfillmentType,
     Guid? AddressId,
     string? Notes,
-    List<CreateOrderDayRequest> Days
+    List<CreateOrderDayRequest> Days,
+    // Opsional. Diskon dihitung ulang di server; nilai dari client tidak dipakai.
+    string? VoucherCode = null
 );
 
 public record CreateOrderDayRequest(
@@ -147,6 +149,7 @@ public record OrderDetailDto(
     string? Notes,
     decimal Subtotal,
     decimal DiscountAmount,
+    string? VoucherCode,
     decimal DeliveryFee,
     decimal GrandTotal,
     DateTime PaymentDueAt,

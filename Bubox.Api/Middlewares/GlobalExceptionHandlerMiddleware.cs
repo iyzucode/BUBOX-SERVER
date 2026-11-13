@@ -53,6 +53,10 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
             PaymentGatewayException ex => (StatusCodes.Status502BadGateway, "PAYMENT_GATEWAY_ERROR", ex.Message),
             InvalidPaymentNotificationException ex => (StatusCodes.Status400BadRequest, "INVALID_PAYMENT_NOTIFICATION", ex.Message),
             InvalidSettingException ex => (StatusCodes.Status400BadRequest, "INVALID_SETTING", ex.Message),
+            VoucherNotFoundException ex => (StatusCodes.Status404NotFound, "VOUCHER_NOT_FOUND", ex.Message),
+            VoucherNotApplicableException ex => (StatusCodes.Status400BadRequest, "VOUCHER_NOT_APPLICABLE", ex.Message),
+            InvalidVoucherException ex => (StatusCodes.Status400BadRequest, "INVALID_VOUCHER", ex.Message),
+            VoucherCodeExistsException ex => (StatusCodes.Status409Conflict, "VOUCHER_CODE_EXISTS", ex.Message),
             UnauthorizedAccessException ex => (StatusCodes.Status401Unauthorized, "UNAUTHORIZED", ex.Message),
             _ => (StatusCodes.Status500InternalServerError, "INTERNAL_SERVER_ERROR", "Terjadi kesalahan pada server.")
         };

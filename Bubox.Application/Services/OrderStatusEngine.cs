@@ -84,7 +84,10 @@ public class OrderStatusEngine(IOrderStatusTransitionRepository transitionReposi
         }
     }
 
-    /// <summary>Order belum dibayar ditutup (batal/expired/gagal bayar): semua hari SCHEDULED → CANCELLED.</summary>
+    /// <summary>
+    /// Order belum dibayar ditutup (batal/expired/gagal bayar): semua hari SCHEDULED → CANCELLED,
+    /// dan pemakaian voucher-nya dilepas.
+    /// </summary>
     public async Task CloseUnpaidOrderAsync(
         IOrderUnitOfWork uow, Order order, List<OrderDay> days, string toCode, OrderActor actor, string? reason, DateTime nowUtc)
     {
@@ -100,6 +103,9 @@ public class OrderStatusEngine(IOrderStatusTransitionRepository transitionReposi
         {
             await ChangeDayStatusAsync(uow, day, OrderDayStatusCodes.Cancelled, system, reason, nowUtc);
         }
+
+        // Pesanan tidak jadi dibayar: voucher yang dipakai boleh dipakai lagi oleh pengguna.
+        await uow.ReleaseVoucherRedemptionAsync(order.Id, nowUtc);
     }
 
     /// <summary>

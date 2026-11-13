@@ -13,6 +13,7 @@ internal static class OrderSql
         o.address_snapshot::text AS AddressSnapshot,
         o.subtotal AS Subtotal,
         o.discount_amount AS DiscountAmount,
+        o.voucher_code AS VoucherCode,
         o.delivery_fee AS DeliveryFee,
         o.grand_total AS GrandTotal,
         o.notes AS Notes,

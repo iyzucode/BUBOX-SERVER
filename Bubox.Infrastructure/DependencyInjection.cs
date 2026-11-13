@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<IOrderStatusTransitionRepository, OrderStatusTransitionRepository>();
         services.AddScoped<IAppSettingRepository, AppSettingRepository>();
         services.AddScoped<IOrderUnitOfWorkFactory, OrderUnitOfWorkFactory>();
+        services.AddScoped<IVoucherRepository, VoucherRepository>();
 
         // HttpClient tunggal yang berumur panjang; koneksi di-refresh berkala agar perubahan DNS terbaca
         services.AddSingleton<IPaymentGateway>(sp => new MidtransPaymentGateway(
