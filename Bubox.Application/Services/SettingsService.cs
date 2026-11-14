@@ -35,9 +35,20 @@ public class SettingsService(IAppSettingRepository settingRepository) : ISetting
             DeliveryFee = decimal.TryParse(Get(AppSettingKeys.DeliveryFee), NumberStyles.Number, CultureInfo.InvariantCulture, out var fee) && fee >= 0
                 ? fee
                 : OrderSettings.DefaultDeliveryFee,
+            ServiceFeeType = ServiceFeeTypes.All.Contains(Get(AppSettingKeys.ServiceFeeType) ?? string.Empty)
+                ? Get(AppSettingKeys.ServiceFeeType)!
+                : ServiceFeeTypes.Fixed,
+            ServiceFeeValue = ParseNonNegative(Get(AppSettingKeys.ServiceFeeValue)),
+            TaxPercent = Math.Min(100m, ParseNonNegative(Get(AppSettingKeys.TaxPercent))),
             UpdatedAt = settings.Count == 0 ? null : settings.Values.Max(s => s.UpdatedAt)
         };
     }
+
+    private static decimal ParseNonNegative(string? value) =>
+        decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) && d >= 0 ? d : 0m;
+
+    /// <summary>Persen 0-100 dengan maksimal 2 angka desimal.</summary>
+    private static bool IsValidPercent(decimal value) => value is >= 0 and <= 100 && decimal.Round(value, 2) == value;
 
     public async Task<OrderSettingsDto> GetOrderSettingsAsync() => ToDto(await GetEffectiveOrderSettingsAsync());
 
@@ -69,6 +80,28 @@ public class SettingsService(IAppSettingRepository settingRepository) : ISetting
             throw new InvalidSettingException("Ongkir harus bilangan bulat Rupiah antara 0 sampai 1.000.000.");
         }
 
+        var serviceFeeType = request.ServiceFeeType?.Trim().ToUpperInvariant() ?? string.Empty;
+        if (!ServiceFeeTypes.All.Contains(serviceFeeType))
+        {
+            throw new InvalidSettingException("Jenis biaya layanan harus PERCENT (persen) atau FIXED (nominal).");
+        }
+
+        if (serviceFeeType == ServiceFeeTypes.Percent && !IsValidPercent(request.ServiceFeeValue))
+        {
+            throw new InvalidSettingException("Biaya layanan (persen) harus antara 0 sampai 100, maksimal 2 angka desimal.");
+        }
+
+        if (serviceFeeType == ServiceFeeTypes.Fixed &&
+            (request.ServiceFeeValue < 0 || request.ServiceFeeValue > 1_000_000 || request.ServiceFeeValue != decimal.Truncate(request.ServiceFeeValue)))
+        {
+            throw new InvalidSettingException("Biaya layanan (nominal) harus bilangan bulat Rupiah antara 0 sampai 1.000.000.");
+        }
+
+        if (!IsValidPercent(request.TaxPercent))
+        {
+            throw new InvalidSettingException("Pajak harus antara 0 sampai 100 persen, maksimal 2 angka desimal.");
+        }
+
         var values = new List<AppSetting>
         {
             New(AppSettingKeys.OrderCutoffDaysBefore, request.CutoffDaysBefore.ToString(CultureInfo.InvariantCulture), AppSettingValueTypes.Int,
@@ -80,7 +113,13 @@ public class SettingsService(IAppSettingRepository settingRepository) : ISetting
             New(AppSettingKeys.PaymentTimeoutMinutes, request.PaymentTimeoutMinutes.ToString(CultureInfo.InvariantCulture), AppSettingValueTypes.Int,
                 "Batas waktu pembayaran QRIS dalam menit"),
             New(AppSettingKeys.DeliveryFee, request.DeliveryFee.ToString("0", CultureInfo.InvariantCulture), AppSettingValueTypes.Decimal,
-                "Ongkos kirim per order (Rupiah)")
+                "Ongkos kirim per order (Rupiah)"),
+            New(AppSettingKeys.ServiceFeeType, serviceFeeType, AppSettingValueTypes.String,
+                "Jenis biaya layanan: PERCENT (persen dari subtotal - diskon) atau FIXED (Rupiah per pesanan)"),
+            New(AppSettingKeys.ServiceFeeValue, request.ServiceFeeValue.ToString("0.##", CultureInfo.InvariantCulture), AppSettingValueTypes.Decimal,
+                "Besar biaya layanan: persen (maks 2 desimal) atau Rupiah, sesuai SERVICE_FEE_TYPE"),
+            New(AppSettingKeys.TaxPercent, request.TaxPercent.ToString("0.##", CultureInfo.InvariantCulture), AppSettingValueTypes.Decimal,
+                "Pajak (persen, maks 2 desimal) dari subtotal - diskon + biaya layanan")
         };
 
         await settingRepository.UpsertManyAsync(values, updatedBy);
@@ -99,7 +138,10 @@ public class SettingsService(IAppSettingRepository settingRepository) : ISetting
             ServerTimeUtc: nowUtc,
             EarliestDeliveryDate: settings.GetEarliestDeliveryDate(nowUtc),
             LatestDeliveryDate: settings.GetLocalToday(nowUtc).AddDays(OrderLimits.MaxAdvanceDays),
-            DeliveryFee: settings.DeliveryFee
+            DeliveryFee: settings.DeliveryFee,
+            ServiceFeeType: settings.ServiceFeeType,
+            ServiceFeeValue: settings.ServiceFeeValue,
+            TaxPercent: settings.TaxPercent
         );
     }
 
@@ -109,6 +151,9 @@ public class SettingsService(IAppSettingRepository settingRepository) : ISetting
         TimeZone: s.TimeZoneId,
         PaymentTimeoutMinutes: s.PaymentTimeoutMinutes,
         DeliveryFee: s.DeliveryFee,
+        ServiceFeeType: s.ServiceFeeType,
+        ServiceFeeValue: s.ServiceFeeValue,
+        TaxPercent: s.TaxPercent,
         UpdatedAt: s.UpdatedAt
     );
 

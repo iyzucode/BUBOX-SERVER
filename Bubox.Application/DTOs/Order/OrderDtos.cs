@@ -178,7 +178,12 @@ public record OrderDetailDto(
     IReadOnlyList<OrderDayDto> Days,
     IReadOnlyList<OrderStatusHistoryDto> Histories,
     // PICKUP: outlet tempat ambil (null pada pesanan PICKUP lama sebelum ada outlet)
-    OutletSnapshotDto? Outlet = null
+    OutletSnapshotDto? Outlet = null,
+    // Biaya layanan & pajak (0 pada pesanan lama). ServiceFeePercent null = nominal tetap.
+    decimal ServiceFee = 0,
+    decimal? ServiceFeePercent = null,
+    decimal TaxAmount = 0,
+    decimal TaxPercent = 0
 );
 
 public record ProductionMenuSummaryDto(

@@ -127,6 +127,20 @@ public static class AppSettingKeys
     public const string OrderTimezone = "ORDER_TIMEZONE";
     public const string PaymentTimeoutMinutes = "PAYMENT_TIMEOUT_MINUTES";
     public const string DeliveryFee = "DELIVERY_FEE";
+    public const string ServiceFeeType = "SERVICE_FEE_TYPE";
+    public const string ServiceFeeValue = "SERVICE_FEE_VALUE";
+    public const string TaxPercent = "TAX_PERCENT";
+}
+
+/// <summary>Jenis biaya layanan pesanan.</summary>
+public static class ServiceFeeTypes
+{
+    /// <summary>Persen dari subtotal − diskon.</summary>
+    public const string Percent = "PERCENT";
+    /// <summary>Nominal Rupiah tetap per pesanan.</summary>
+    public const string Fixed = "FIXED";
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string> { Percent, Fixed };
 }
 
 public static class AppSettingValueTypes

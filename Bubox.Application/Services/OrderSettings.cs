@@ -19,6 +19,12 @@ public sealed class OrderSettings
     public string TimeZoneId { get; init; } = DefaultTimeZone;
     public int PaymentTimeoutMinutes { get; init; } = DefaultPaymentTimeoutMinutes;
     public decimal DeliveryFee { get; init; } = DefaultDeliveryFee;
+    /// <summary>ServiceFeeTypes.Percent / Fixed.</summary>
+    public string ServiceFeeType { get; init; } = ServiceFeeTypes.Fixed;
+    /// <summary>Persen (PERCENT) atau Rupiah (FIXED). 0 = tanpa biaya layanan.</summary>
+    public decimal ServiceFeeValue { get; init; }
+    /// <summary>Pajak dalam persen. 0 = tanpa pajak.</summary>
+    public decimal TaxPercent { get; init; }
     public DateTime? UpdatedAt { get; init; }
 
     public TimeZoneInfo TimeZone => ResolveTimeZone(TimeZoneId);

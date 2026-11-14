@@ -221,7 +221,9 @@ public class OrderService(
         }
 
         var discountAmount = voucher?.DiscountAmount ?? 0m;
-        var grandTotal = subtotal - discountAmount + deliveryFee;
+        // 4c. Biaya layanan & pajak dari subtotal setelah diskon (lihat OrderCharges)
+        var charges = OrderCharges.Compute(subtotal - discountAmount, settings);
+        var grandTotal = subtotal - discountAmount + charges.ServiceFee + charges.TaxAmount + deliveryFee;
 
         if (grandTotal <= 0)
         {
@@ -252,6 +254,10 @@ public class OrderService(
             DiscountAmount = discountAmount,
             VoucherCode = voucher?.Voucher.Code,
             DeliveryFee = deliveryFee,
+            ServiceFee = charges.ServiceFee,
+            ServiceFeePercent = charges.ServiceFeePercent,
+            TaxAmount = charges.TaxAmount,
+            TaxPercent = charges.TaxPercent,
             GrandTotal = grandTotal,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
             PaymentDueAt = nowUtc.AddMinutes(settings.PaymentTimeoutMinutes),
@@ -431,7 +437,11 @@ public class OrderService(
             Days: dayDtos,
             Histories: histories.Select(h => new OrderStatusHistoryDto(
                 h.Scope, h.EntityId, h.FromCode, h.ToCode, h.ActorRole, h.Reason, h.CreatedAt)).ToList(),
-            Outlet: OrderMapper.DeserializeOutlet(order.OutletSnapshot));
+            Outlet: OrderMapper.DeserializeOutlet(order.OutletSnapshot),
+            ServiceFee: order.ServiceFee,
+            ServiceFeePercent: order.ServiceFeePercent,
+            TaxAmount: order.TaxAmount,
+            TaxPercent: order.TaxPercent);
     }
 
     public async Task CancelOrderAsync(Guid orderId, OrderActor actor, string? reason)

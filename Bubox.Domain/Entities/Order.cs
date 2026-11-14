@@ -19,6 +19,12 @@ public class Order
     /// <summary>Kode voucher yang dipakai (snapshot), null bila tanpa voucher.</summary>
     public string? VoucherCode { get; set; }
     public decimal DeliveryFee { get; set; }
+    public decimal ServiceFee { get; set; }
+    /// <summary>Tarif biaya layanan bila berupa persen (snapshot); null = nominal tetap.</summary>
+    public decimal? ServiceFeePercent { get; set; }
+    public decimal TaxAmount { get; set; }
+    /// <summary>Tarif pajak saat pesanan dibuat (snapshot).</summary>
+    public decimal TaxPercent { get; set; }
     public decimal GrandTotal { get; set; }
     public string? Notes { get; set; }
     public DateTime PaymentDueAt { get; set; }
