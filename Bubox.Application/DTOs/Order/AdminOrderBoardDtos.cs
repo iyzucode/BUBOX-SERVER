@@ -20,6 +20,12 @@ public record AdminOrderBoardRequest(
     string? DriverIds = null,
     string? OutletIds = null,
     string? CategoryCodes = null,
+    /// <summary>Status bayar: PAID, AWAITING, REVIEW, EXPIRED, FAILED, CANCELLED (batal sebelum bayar).</summary>
+    string? Payments = null,
+    /// <summary>Kode voucher; "NONE" = tanpa voucher.</summary>
+    string? Vouchers = null,
+    /// <summary>Refund manual: PENDING (tertunda), DONE (sudah direfund).</summary>
+    string? Refunds = null,
     Guid? MenuId = null,
     /// <summary>Kunci tab status (lihat AdminBoardTabs); default ALL.</summary>
     string? Tab = null,
@@ -36,7 +42,10 @@ public record AdminFacetsDto(
     IReadOnlyList<AdminFacetOptionDto> Zones,
     IReadOnlyList<AdminFacetOptionDto> Drivers,
     IReadOnlyList<AdminFacetOptionDto> Outlets,
-    IReadOnlyList<AdminFacetOptionDto> Categories
+    IReadOnlyList<AdminFacetOptionDto> Categories,
+    IReadOnlyList<AdminFacetOptionDto> Payments,
+    IReadOnlyList<AdminFacetOptionDto> Vouchers,
+    IReadOnlyList<AdminFacetOptionDto> Refunds
 );
 
 public record AdminBoardSummaryDto(
@@ -64,6 +73,7 @@ public record AdminDayRowDto(
     string OrderStatus,
     string FulfillmentType,
     DateTime DayUpdatedAt,
+    DateTime OrderCreatedAt,
     // Menu & porsi
     string? FirstMenuName,
     int MenuCount,
@@ -86,7 +96,15 @@ public record AdminDayRowDto(
     DateTime PaymentDueAt,
     DateTime? PaidAt,
     bool PaymentNeedsReview,
+    /// <summary>PAID, AWAITING, REVIEW, EXPIRED, FAILED, CANCELLED.</summary>
+    string PaymentStatus,
+    string? VoucherCode,
+    /// <summary>Hari ini dibatalkan setelah dibayar (perlu / pernah direfund manual).</summary>
     bool RequiresManualRefund,
+    /// <summary>Refund manual belum ditandai selesai.</summary>
+    bool RefundPending,
+    decimal DaySubtotal,
+    DateTime? RefundedAt,
     bool NeedsDriver,
     bool NeedsAttention
 );
@@ -113,8 +131,11 @@ public record AdminOrderRowDto(
     DateTime PaymentDueAt,
     DateTime? PaidAt,
     bool PaymentNeedsReview,
+    string PaymentStatus,
+    string? VoucherCode,
     int RefundPendingDays,
     decimal RefundPendingAmount,
+    int RefundedDays,
     int NeedsDriverDays,
     bool NeedsAttention
 );
@@ -133,13 +154,16 @@ public record AdminBoardResult<T>(
     IReadOnlyList<ProductionMenuSummaryDto> Production
 );
 
-/// <summary>Penugasan pengantaran satu hari kirim (panel detail admin).</summary>
+/// <summary>Penugasan pengantaran & catatan refund satu hari kirim (panel detail admin).</summary>
 public record AdminDayAssignmentDto(
     Guid OrderDayId,
     string? ZoneName,
     Guid? DriverUserId,
     string? DriverName,
-    string? AssignmentSource
+    string? AssignmentSource,
+    DateTime? RefundedAt,
+    string? RefundedByName,
+    string? RefundNote
 );
 
 /// <summary>Detail pesanan untuk panel samping admin: detail biasa + data pelanggan & penugasan per hari.</summary>
@@ -152,3 +176,61 @@ public record AdminOrderDetailDto(
     string? PaymentReviewNote,
     IReadOnlyList<AdminDayAssignmentDto> Assignments
 );
+
+// ==========================================
+// Aksi massal
+// ==========================================
+
+public record BulkDayStatusRequest(List<Guid> OrderDayIds, string StatusCode);
+
+public record BulkCancelDaysRequest(List<Guid> OrderDayIds, string Reason);
+
+public record MarkDaysRefundedRequest(List<Guid> OrderDayIds, string? Note);
+
+public record BulkActionFailureDto(Guid OrderDayId, string? OrderNumber, string Message);
+
+/// <summary>Hasil aksi massal: tiap hari diproses sendiri-sendiri, yang gagal tidak menggagalkan yang lain.</summary>
+public record BulkActionResultDto(int Succeeded, IReadOnlyList<BulkActionFailureDto> Failed);
+
+// ==========================================
+// Lembar dapur & aktivitas
+// ==========================================
+
+public record KitchenSheetItemDto(string MenuName, string CategoryName, int Qty);
+
+/// <summary>Satu hari kirim di lembar dapur (dicetak).</summary>
+public record KitchenSheetDayDto(
+    Guid OrderDayId,
+    DateOnly DeliveryDate,
+    string OrderNumber,
+    int DayIndex,
+    int DayCount,
+    string CustomerName,
+    string FulfillmentType,
+    string? RecipientName,
+    string? RecipientPhone,
+    string? AddressLine,
+    string? ZoneName,
+    string? DriverName,
+    string? OutletName,
+    string? PickupHours,
+    string? Notes,
+    string DayStatus,
+    int Portions,
+    IReadOnlyList<KitchenSheetItemDto> Items
+);
+
+/// <summary>Rekap per menu per tanggal kirim (lembar dapur).</summary>
+public record KitchenSheetDateDto(DateOnly DeliveryDate, int Portions, IReadOnlyList<ProductionMenuSummaryDto> Menus);
+
+public record KitchenSheetDto(
+    DateOnly DateFrom,
+    DateOnly DateTo,
+    DateTime GeneratedAt,
+    int Portions,
+    IReadOnlyList<ProductionMenuSummaryDto> Menus,
+    IReadOnlyList<KitchenSheetDateDto> Dates,
+    IReadOnlyList<KitchenSheetDayDto> Days
+);
+
+public record BoardActivityDto(int NewOrders, int NewlyPaid, DateTime? LatestAt, DateTime ServerTime);

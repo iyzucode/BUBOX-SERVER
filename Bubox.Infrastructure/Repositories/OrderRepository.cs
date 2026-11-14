@@ -210,12 +210,22 @@ public class OrderRepository(IDbConnectionFactory connectionFactory) : IOrderRep
                 du.full_name AS DriverName,
                 a.assignment_source AS AssignmentSource,
                 COALESCE(p.needs_review, FALSE) AS PaymentNeedsReview,
-                p.review_note AS PaymentReviewNote
+                p.review_note AS PaymentReviewNote,
+                d.refunded_at AS RefundedAt,
+                ru.full_name AS RefundedByName,
+                d.refund_note AS RefundNote,
+                o.subtotal AS Subtotal,
+                o.discount_amount AS DiscountAmount,
+                o.voucher_code AS VoucherCode,
+                o.delivery_fee AS DeliveryFee,
+                o.service_fee AS ServiceFee,
+                o.tax_amount AS TaxAmount
             FROM days d
             JOIN orders o ON o.id = d.order_id
             JOIN users u ON u.id = o.user_id
             LEFT JOIN v_order_day_delivery_assignments a ON a.order_day_id = d.id
             LEFT JOIN users du ON du.id = a.driver_user_id
+            LEFT JOIN users ru ON ru.id = d.refunded_by
             LEFT JOIN LATERAL (
                 SELECT pay.needs_review, pay.review_note
                 FROM payments pay
@@ -239,6 +249,33 @@ public class OrderRepository(IDbConnectionFactory connectionFactory) : IOrderRep
             Search = query.SearchPattern,
             query.WholeOrders
         });
+    }
+
+    public async Task<OrderActivity> GetActivitySinceAsync(DateTime sinceUtc)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = """
+            SELECT
+                COUNT(*) FILTER (WHERE created_at > @Since)::int AS NewOrders,
+                COUNT(*) FILTER (WHERE paid_at > @Since)::int AS NewlyPaid,
+                MAX(GREATEST(created_at, COALESCE(paid_at, created_at))) AS LatestAt
+            FROM orders
+            WHERE created_at > @Since OR paid_at > @Since;
+            """;
+        return await connection.QuerySingleAsync<OrderActivity>(sql, new { Since = sinceUtc });
+    }
+
+    public async Task<IReadOnlyList<Guid>> MarkDaysRefundedAsync(IReadOnlyCollection<Guid> dayIds, string? note, Guid adminId, DateTime nowUtc)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = """
+            UPDATE order_days
+            SET refunded_at = @Now, refunded_by = @AdminId, refund_note = @Note
+            WHERE id = ANY(@Ids) AND requires_manual_refund AND refunded_at IS NULL
+            RETURNING id;
+            """;
+        var ids = await connection.QueryAsync<Guid>(sql, new { Ids = dayIds.ToArray(), Note = note, AdminId = adminId, Now = nowUtc });
+        return ids.ToList();
     }
 
     public async Task<IEnumerable<OrderStatusHistory>> GetHistoriesAsync(Guid orderId)

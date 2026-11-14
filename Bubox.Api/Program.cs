@@ -69,7 +69,8 @@ builder.Services.AddCors(options =>
             policy.AllowAnyOrigin();
         }
 
-        policy.AllowAnyHeader().AllowAnyMethod();
+        // Content-Disposition: nama file unduhan (ekspor Excel) terbaca oleh web di origin lain
+        policy.AllowAnyHeader().AllowAnyMethod().WithExposedHeaders("Content-Disposition");
     });
 });
 

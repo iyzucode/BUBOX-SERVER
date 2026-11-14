@@ -1,6 +1,7 @@
 using Bubox.Api.Extensions;
 using Bubox.Application.DTOs.Order;
 using Bubox.Application.Interfaces;
+using Bubox.Application.Services.Export;
 using Bubox.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,6 +34,54 @@ public class OrderAdminController(IOrderAdminService orderAdminService, IAdminOr
     [HttpGet("GetOrderDetail")]
     public async Task<IActionResult> GetOrderDetail([FromQuery] Guid id) =>
         Ok(await boardService.GetOrderDetailAsync(id, User.ToOrderActor()));
+
+    /// <summary>Ekspor Excel tampilan per hari kirim (semua baris sesuai filter & tab, tanpa paging).</summary>
+    [Authorize(Roles = Viewers)]
+    [HttpGet("ExportDays")]
+    public async Task<IActionResult> ExportDays([FromQuery] AdminOrderBoardRequest request)
+    {
+        var file = await boardService.ExportDaysAsync(request);
+        return File(file.Content, XlsxWriter.ContentType, file.FileName);
+    }
+
+    /// <summary>Ekspor transaksi (per pesanan, dengan rincian biaya).</summary>
+    [Authorize(Roles = Viewers)]
+    [HttpGet("ExportOrders")]
+    public async Task<IActionResult> ExportOrders([FromQuery] AdminOrderBoardRequest request)
+    {
+        var file = await boardService.ExportOrdersAsync(request);
+        return File(file.Content, XlsxWriter.ContentType, file.FileName);
+    }
+
+    /// <summary>Lembar dapur untuk dicetak: rekap per menu & daftar kiriman lengkap dengan item dan catatan.</summary>
+    [Authorize(Roles = $"{Viewers},{RoleConstants.Kitchen},{RoleConstants.Driver}")]
+    [HttpGet("GetKitchenSheet")]
+    public async Task<IActionResult> GetKitchenSheet([FromQuery] AdminOrderBoardRequest request) =>
+        Ok(await boardService.GetKitchenSheetAsync(request));
+
+    /// <summary>Indikator pesanan baru: jumlah pesanan dibuat & dibayar sejak <paramref name="since"/> (UTC).</summary>
+    [Authorize(Roles = $"{Viewers},{RoleConstants.Kitchen},{RoleConstants.Driver}")]
+    [HttpGet("GetBoardActivity")]
+    public async Task<IActionResult> GetBoardActivity([FromQuery] DateTime since) =>
+        Ok(await boardService.GetActivityAsync(since.Kind == DateTimeKind.Local ? since.ToUniversalTime() : since));
+
+    /// <summary>Majukan status beberapa hari kirim sekaligus. Role per transisi tetap dicek state machine.</summary>
+    [Authorize(Roles = $"{Managers},{RoleConstants.Kitchen},{RoleConstants.Driver}")]
+    [HttpPut("BulkUpdateDayStatus")]
+    public async Task<IActionResult> BulkUpdateDayStatus([FromBody] BulkDayStatusRequest request) =>
+        Ok(await boardService.BulkUpdateDayStatusAsync(request, User.ToOrderActor()));
+
+    /// <summary>Batalkan beberapa hari kirim sekaligus (force majeure, perlu refund manual).</summary>
+    [Authorize(Roles = Managers)]
+    [HttpPut("BulkCancelDays")]
+    public async Task<IActionResult> BulkCancelDays([FromBody] BulkCancelDaysRequest request) =>
+        Ok(await boardService.BulkCancelDaysAsync(request, User.ToOrderActor()));
+
+    /// <summary>Tandai refund manual sudah dilakukan untuk satu atau beberapa hari kirim.</summary>
+    [Authorize(Roles = Managers)]
+    [HttpPut("MarkDaysRefunded")]
+    public async Task<IActionResult> MarkDaysRefunded([FromBody] MarkDaysRefundedRequest request) =>
+        Ok(await boardService.MarkDaysRefundedAsync(request, User.GetUserId()));
 
     [Authorize(Roles = Viewers)]
     [HttpGet("GetOrders")]

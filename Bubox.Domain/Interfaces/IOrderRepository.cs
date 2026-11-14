@@ -109,6 +109,25 @@ public class AdminDayRow
     public string? AssignmentSource { get; set; }
     public bool PaymentNeedsReview { get; set; }
     public string? PaymentReviewNote { get; set; }
+    // Refund manual yang sudah dilakukan
+    public DateTime? RefundedAt { get; set; }
+    public string? RefundedByName { get; set; }
+    public string? RefundNote { get; set; }
+    // Rincian nilai pesanan (ekspor transaksi)
+    public decimal Subtotal { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public string? VoucherCode { get; set; }
+    public decimal DeliveryFee { get; set; }
+    public decimal ServiceFee { get; set; }
+    public decimal TaxAmount { get; set; }
+}
+
+/// <summary>Aktivitas pesanan sejak suatu waktu (indikator pesanan baru di layar admin).</summary>
+public class OrderActivity
+{
+    public int NewOrders { get; set; }
+    public int NewlyPaid { get; set; }
+    public DateTime? LatestAt { get; set; }
 }
 
 /// <summary>Status ringan untuk polling halaman pembayaran (tanpa hari, item, histori).</summary>
@@ -136,6 +155,13 @@ public interface IOrderRepository
     /// <summary>Baris hari kirim untuk layar admin Pesanan (filter lanjutan & hitungan dilakukan di service).</summary>
     Task<IEnumerable<AdminDayRow>> GetAdminDayRowsAsync(AdminDayRowQuery query);
     Task<IEnumerable<Guid>> GetOverdueAwaitingPaymentIdsAsync(DateTime dueBeforeUtc, int limit);
+    /// <summary>Pesanan dibuat & dibayar sejak <paramref name="sinceUtc"/> (semua tanggal kirim).</summary>
+    Task<OrderActivity> GetActivitySinceAsync(DateTime sinceUtc);
+    /// <summary>
+    /// Tandai refund manual sudah dilakukan untuk hari yang masih tertunda (requires_manual_refund dan belum direfund).
+    /// Mengembalikan id hari yang benar-benar diperbarui.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> MarkDaysRefundedAsync(IReadOnlyCollection<Guid> dayIds, string? note, Guid adminId, DateTime nowUtc);
 }
 
 public interface IPaymentRepository

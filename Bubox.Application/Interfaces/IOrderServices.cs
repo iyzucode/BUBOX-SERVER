@@ -31,6 +31,19 @@ public interface IAdminOrderBoardService
     Task<AdminBoardResult<AdminDayRowDto>> SearchDaysAsync(AdminOrderBoardRequest request);
     Task<AdminBoardResult<AdminOrderRowDto>> SearchOrdersAsync(AdminOrderBoardRequest request);
     Task<AdminOrderDetailDto> GetOrderDetailAsync(Guid orderId, OrderActor actor);
+
+    // Aksi massal (tiap hari diproses sendiri; hasil berisi yang gagal beserta alasannya)
+    Task<BulkActionResultDto> BulkUpdateDayStatusAsync(BulkDayStatusRequest request, OrderActor actor);
+    Task<BulkActionResultDto> BulkCancelDaysAsync(BulkCancelDaysRequest request, OrderActor actor);
+    Task<BulkActionResultDto> MarkDaysRefundedAsync(MarkDaysRefundedRequest request, Guid adminId);
+
+    // Ekspor Excel & lembar dapur (mengikuti filter, tab, dan urutan yang sama dengan daftar)
+    Task<AdminExportFile> ExportDaysAsync(AdminOrderBoardRequest request);
+    Task<AdminExportFile> ExportOrdersAsync(AdminOrderBoardRequest request);
+    Task<KitchenSheetDto> GetKitchenSheetAsync(AdminOrderBoardRequest request);
+
+    /// <summary>Jumlah pesanan baru & baru dibayar sejak waktu tertentu (indikator pesanan baru).</summary>
+    Task<BoardActivityDto> GetActivityAsync(DateTime sinceUtc);
 }
 
 public interface IPaymentService
