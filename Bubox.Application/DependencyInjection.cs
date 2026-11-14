@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<WilayahCodeResolver>();
         services.AddScoped<DeliveryCoverageService>();
         services.AddScoped<IDeliveryAdminService, DeliveryAdminService>();
+        services.AddScoped<IOutletService, OutletService>();
         return services;
     }
 }

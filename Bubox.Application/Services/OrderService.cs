@@ -18,6 +18,7 @@ public class OrderService(
     ISettingsService settingsService,
     IPaymentGateway paymentGateway,
     IVoucherService voucherService,
+    IOutletRepository outletRepository,
     DeliveryCoverageService coverageService,
     OrderStatusEngine statusEngine) : IOrderService
 {
@@ -109,6 +110,28 @@ public class OrderService(
                 address.Id, address.Label, address.RecipientName, address.PhoneNumber, address.FullAddress,
                 address.Subdistrict, address.City, address.Province, address.PostalCode, address.Notes,
                 address.Latitude, address.Longitude, deliveryWilayahCode));
+        }
+
+        // 3b. Outlet (snapshot) untuk PICKUP, wajib outlet aktif
+        Guid? outletId = null;
+        string? outletSnapshot = null;
+        if (fulfillmentType == FulfillmentTypes.Pickup)
+        {
+            if (request.OutletId is null || request.OutletId == Guid.Empty)
+            {
+                throw new InvalidOrderException("Outlet tempat ambil wajib dipilih untuk metode PICKUP.");
+            }
+
+            var outlet = await outletRepository.GetByIdAsync(request.OutletId.Value);
+            if (outlet is not { IsActive: true })
+            {
+                throw new OutletUnavailableException();
+            }
+
+            outletId = outlet.Id;
+            outletSnapshot = OrderMapper.SerializeOutlet(new OutletSnapshotDto(
+                outlet.Id, outlet.Name, outlet.FullAddress, outlet.WilayahPath, OutletService.FormatPickupHours(outlet),
+                outlet.WhatsappNumber, outlet.Latitude, outlet.Longitude));
         }
 
         // 4. Harga dihitung ulang dari jadwal menu aktif (bukan dari client)
@@ -223,6 +246,8 @@ public class OrderService(
             AddressId = addressId,
             AddressSnapshot = addressSnapshot,
             DeliveryWilayahCode = deliveryWilayahCode,
+            OutletId = outletId,
+            OutletSnapshot = outletSnapshot,
             Subtotal = subtotal,
             DiscountAmount = discountAmount,
             VoucherCode = voucher?.Voucher.Code,
@@ -405,7 +430,8 @@ public class OrderService(
             Payment: payment == null ? null : OrderMapper.ToDto(payment, includeQr: order.StatusCode == OrderStatusCodes.AwaitingPayment),
             Days: dayDtos,
             Histories: histories.Select(h => new OrderStatusHistoryDto(
-                h.Scope, h.EntityId, h.FromCode, h.ToCode, h.ActorRole, h.Reason, h.CreatedAt)).ToList());
+                h.Scope, h.EntityId, h.FromCode, h.ToCode, h.ActorRole, h.Reason, h.CreatedAt)).ToList(),
+            Outlet: OrderMapper.DeserializeOutlet(order.OutletSnapshot));
     }
 
     public async Task CancelOrderAsync(Guid orderId, OrderActor actor, string? reason)

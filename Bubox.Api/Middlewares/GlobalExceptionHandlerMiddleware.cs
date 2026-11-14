@@ -63,6 +63,11 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
             DeliveryZoneCodeExistsException ex => (StatusCodes.Status409Conflict, "DELIVERY_ZONE_CODE_EXISTS", ex.Message),
             DeliveryZoneNotEmptyException ex => (StatusCodes.Status409Conflict, "DELIVERY_ZONE_NOT_EMPTY", ex.Message),
             DriverNotAssignedException ex => (StatusCodes.Status409Conflict, "DRIVER_NOT_ASSIGNED", ex.Message),
+            InvalidOutletException ex => (StatusCodes.Status400BadRequest, "INVALID_OUTLET", ex.Message),
+            OutletNotFoundException ex => (StatusCodes.Status404NotFound, "OUTLET_NOT_FOUND", ex.Message),
+            OutletNameExistsException ex => (StatusCodes.Status409Conflict, "OUTLET_NAME_EXISTS", ex.Message),
+            OutletInUseException ex => (StatusCodes.Status409Conflict, "OUTLET_IN_USE", ex.Message),
+            OutletUnavailableException ex => (StatusCodes.Status400BadRequest, "OUTLET_UNAVAILABLE", ex.Message),
             UnauthorizedAccessException ex => (StatusCodes.Status401Unauthorized, "UNAUTHORIZED", ex.Message),
             _ => (StatusCodes.Status500InternalServerError, "INTERNAL_SERVER_ERROR", "Terjadi kesalahan pada server.")
         };

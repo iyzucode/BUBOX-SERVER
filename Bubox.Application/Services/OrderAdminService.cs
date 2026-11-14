@@ -214,7 +214,8 @@ public class OrderAdminService(
             ZoneName: r.ZoneName,
             DriverUserId: r.DriverUserId,
             DriverName: r.DriverName,
-            AssignmentSource: r.AssignmentSource)).ToList();
+            AssignmentSource: r.AssignmentSource,
+            Outlet: OrderMapper.DeserializeOutlet(r.OutletSnapshot))).ToList();
     }
 
     private static string RequireReason(string? reason)

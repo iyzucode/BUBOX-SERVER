@@ -29,6 +29,26 @@ internal static class OrderMapper
         }
     }
 
+    public static string SerializeOutlet(OutletSnapshotDto outlet) =>
+        JsonSerializer.Serialize(outlet, SnapshotJsonOptions);
+
+    public static OutletSnapshotDto? DeserializeOutlet(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<OutletSnapshotDto>(json, SnapshotJsonOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     public static DateOnly ToDateOnly(DateTime value) => DateOnly.FromDateTime(value);
 
     public static DateTime ToDbDate(DateOnly value) => value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);

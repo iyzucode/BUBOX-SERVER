@@ -188,6 +188,7 @@ public class OrderRepository(IDbConnectionFactory connectionFactory) : IOrderRep
                 d.status_code AS StatusCode,
                 o.fulfillment_type AS FulfillmentType,
                 o.address_snapshot::text AS AddressSnapshot,
+                o.outlet_snapshot::text AS OutletSnapshot,
                 o.notes AS Notes,
                 a.zone_id AS ZoneId,
                 a.zone_name AS ZoneName,

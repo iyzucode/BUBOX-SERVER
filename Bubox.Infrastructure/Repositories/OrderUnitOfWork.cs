@@ -81,11 +81,11 @@ public sealed class OrderUnitOfWork(IDbConnection connection, IDbTransaction tra
         const string sql = """
             INSERT INTO orders (
                 id, order_number, user_id, status_code, fulfillment_type, address_id, address_snapshot,
-                delivery_wilayah_code, subtotal, discount_amount, voucher_code, delivery_fee, grand_total, notes, payment_due_at,
+                delivery_wilayah_code, outlet_id, outlet_snapshot, subtotal, discount_amount, voucher_code, delivery_fee, grand_total, notes, payment_due_at,
                 created_at, updated_at)
             VALUES (
                 @Id, @OrderNumber, @UserId, @StatusCode, @FulfillmentType, @AddressId, @AddressSnapshot::jsonb,
-                @DeliveryWilayahCode, @Subtotal, @DiscountAmount, @VoucherCode, @DeliveryFee, @GrandTotal, @Notes, @PaymentDueAt,
+                @DeliveryWilayahCode, @OutletId, @OutletSnapshot::jsonb, @Subtotal, @DiscountAmount, @VoucherCode, @DeliveryFee, @GrandTotal, @Notes, @PaymentDueAt,
                 @CreatedAt, @UpdatedAt);
             """;
 

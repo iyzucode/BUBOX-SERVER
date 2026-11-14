@@ -10,7 +10,9 @@ public record CreateOrderRequest(
     string? Notes,
     List<CreateOrderDayRequest> Days,
     // Opsional. Diskon dihitung ulang di server; nilai dari client tidak dipakai.
-    string? VoucherCode = null
+    string? VoucherCode = null,
+    // Wajib untuk PICKUP: outlet tempat ambil (harus aktif)
+    Guid? OutletId = null
 );
 
 public record CreateOrderDayRequest(
@@ -77,6 +79,18 @@ public record AddressSnapshotDto(
     double? Longitude,
     // Kode wilayah rf_wilayah (paling spesifik yang diketahui); null pada pesanan lama
     string? WilayahCode = null
+);
+
+/// <summary>Salinan data outlet saat pesanan PICKUP dibuat.</summary>
+public record OutletSnapshotDto(
+    Guid OutletId,
+    string Name,
+    string FullAddress,
+    string WilayahPath,
+    string? PickupHours,
+    string? WhatsappNumber,
+    double? Latitude,
+    double? Longitude
 );
 
 public record OrderSummaryDto(
@@ -162,7 +176,9 @@ public record OrderDetailDto(
     DateTime CreatedAt,
     QrisPaymentDto? Payment,
     IReadOnlyList<OrderDayDto> Days,
-    IReadOnlyList<OrderStatusHistoryDto> Histories
+    IReadOnlyList<OrderStatusHistoryDto> Histories,
+    // PICKUP: outlet tempat ambil (null pada pesanan PICKUP lama sebelum ada outlet)
+    OutletSnapshotDto? Outlet = null
 );
 
 public record ProductionMenuSummaryDto(
@@ -186,7 +202,9 @@ public record DailyOrderDayDto(
     string? ZoneName = null,
     Guid? DriverUserId = null,
     string? DriverName = null,
-    string? AssignmentSource = null
+    string? AssignmentSource = null,
+    // Pengambilan (PICKUP saja): outlet tempat ambil
+    OutletSnapshotDto? Outlet = null
 );
 
 public record DailyProductionDto(

@@ -36,6 +36,7 @@ public class OrderDayScheduleRow
     public string StatusCode { get; set; } = string.Empty;
     public string FulfillmentType { get; set; } = string.Empty;
     public string? AddressSnapshot { get; set; }
+    public string? OutletSnapshot { get; set; }
     public string? Notes { get; set; }
 
     // Penugasan pengantaran efektif (hanya DELIVERY; lihat v_order_day_delivery_assignments)

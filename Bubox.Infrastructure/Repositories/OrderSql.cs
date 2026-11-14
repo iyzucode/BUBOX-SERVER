@@ -12,6 +12,8 @@ internal static class OrderSql
         o.address_id AS AddressId,
         o.address_snapshot::text AS AddressSnapshot,
         o.delivery_wilayah_code AS DeliveryWilayahCode,
+        o.outlet_id AS OutletId,
+        o.outlet_snapshot::text AS OutletSnapshot,
         o.subtotal AS Subtotal,
         o.discount_amount AS DiscountAmount,
         o.voucher_code AS VoucherCode,
