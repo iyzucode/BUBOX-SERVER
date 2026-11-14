@@ -151,6 +151,96 @@ public class OrderRepository(IDbConnectionFactory connectionFactory) : IOrderRep
         return await connection.QueryAsync<OrderItem>(sql, new { DayIds = dayIds.ToArray() });
     }
 
+    public async Task<IEnumerable<AdminDayRow>> GetAdminDayRowsAsync(AdminDayRowQuery query)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = """
+            WITH matched_orders AS (
+                SELECT DISTINCT o.id
+                FROM orders o
+                JOIN users u ON u.id = o.user_id
+                JOIN order_days d ON d.order_id = o.id
+                WHERE (@OrderId::uuid IS NULL OR o.id = @OrderId::uuid)
+                  AND (@DeliveryFrom::date IS NULL OR d.delivery_date >= @DeliveryFrom::date)
+                  AND (@DeliveryTo::date IS NULL OR d.delivery_date <= @DeliveryTo::date)
+                  AND (@CreatedFrom::timestamptz IS NULL OR o.created_at >= @CreatedFrom::timestamptz)
+                  AND (@CreatedTo::timestamptz IS NULL OR o.created_at < @CreatedTo::timestamptz)
+                  AND (@Search::text IS NULL
+                       OR o.order_number ILIKE @Search::text
+                       OR u.full_name ILIKE @Search::text
+                       OR u.email ILIKE @Search::text
+                       OR COALESCE(u.phone_number, '') ILIKE @Search::text
+                       OR COALESCE(o.address_snapshot->>'phoneNumber', '') ILIKE @Search::text
+                       OR COALESCE(o.address_snapshot->>'recipientName', '') ILIKE @Search::text)
+            ),
+            days AS (
+                SELECT d.*,
+                       ROW_NUMBER() OVER (PARTITION BY d.order_id ORDER BY d.delivery_date) AS day_index,
+                       COUNT(*) OVER (PARTITION BY d.order_id) AS day_count
+                FROM order_days d
+                JOIN matched_orders m ON m.id = d.order_id
+            )
+            SELECT
+                d.id AS OrderDayId,
+                o.id AS OrderId,
+                o.order_number AS OrderNumber,
+                u.full_name AS CustomerName,
+                u.email AS CustomerEmail,
+                u.phone_number AS CustomerPhone,
+                d.delivery_date AS DeliveryDate,
+                d.day_index::int AS DayIndex,
+                d.day_count::int AS DayCount,
+                d.status_code AS DayStatus,
+                d.day_subtotal AS DaySubtotal,
+                d.requires_manual_refund AS RequiresManualRefund,
+                d.updated_at AS DayUpdatedAt,
+                o.status_code AS OrderStatus,
+                o.fulfillment_type AS FulfillmentType,
+                o.address_snapshot::text AS AddressSnapshot,
+                o.outlet_id AS OutletId,
+                o.outlet_snapshot::text AS OutletSnapshot,
+                o.notes AS Notes,
+                o.created_at AS OrderCreatedAt,
+                o.payment_due_at AS PaymentDueAt,
+                o.paid_at AS PaidAt,
+                o.grand_total AS GrandTotal,
+                a.zone_id AS ZoneId,
+                a.zone_name AS ZoneName,
+                a.driver_user_id AS DriverUserId,
+                du.full_name AS DriverName,
+                a.assignment_source AS AssignmentSource,
+                COALESCE(p.needs_review, FALSE) AS PaymentNeedsReview,
+                p.review_note AS PaymentReviewNote
+            FROM days d
+            JOIN orders o ON o.id = d.order_id
+            JOIN users u ON u.id = o.user_id
+            LEFT JOIN v_order_day_delivery_assignments a ON a.order_day_id = d.id
+            LEFT JOIN users du ON du.id = a.driver_user_id
+            LEFT JOIN LATERAL (
+                SELECT pay.needs_review, pay.review_note
+                FROM payments pay
+                WHERE pay.order_id = o.id
+                ORDER BY pay.created_at DESC
+                LIMIT 1
+            ) p ON TRUE
+            WHERE @WholeOrders
+               OR ((@DeliveryFrom::date IS NULL OR d.delivery_date >= @DeliveryFrom::date)
+                   AND (@DeliveryTo::date IS NULL OR d.delivery_date <= @DeliveryTo::date))
+            ORDER BY d.delivery_date ASC, o.order_number ASC;
+            """;
+
+        return await connection.QueryAsync<AdminDayRow>(sql, new
+        {
+            query.OrderId,
+            DeliveryFrom = query.DeliveryFrom?.Date,
+            DeliveryTo = query.DeliveryTo?.Date,
+            CreatedFrom = query.CreatedFromUtc,
+            CreatedTo = query.CreatedToUtc,
+            Search = query.SearchPattern,
+            query.WholeOrders
+        });
+    }
+
     public async Task<IEnumerable<OrderStatusHistory>> GetHistoriesAsync(Guid orderId)
     {
         using var connection = connectionFactory.CreateConnection();

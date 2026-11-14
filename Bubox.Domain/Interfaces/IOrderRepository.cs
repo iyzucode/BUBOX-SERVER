@@ -58,6 +58,59 @@ public class OrderSearchFilter
     public int PageSize { get; set; } = 20;
 }
 
+/// <summary>Kriteria pengambilan baris hari kirim untuk layar admin Pesanan.</summary>
+public class AdminDayRowQuery
+{
+    /// <summary>Satu pesanan saja (panel detail).</summary>
+    public Guid? OrderId { get; set; }
+    /// <summary>Rentang tanggal kirim (inklusif).</summary>
+    public DateTime? DeliveryFrom { get; set; }
+    public DateTime? DeliveryTo { get; set; }
+    /// <summary>Rentang waktu pesanan dibuat (UTC, [from, to)).</summary>
+    public DateTime? CreatedFromUtc { get; set; }
+    public DateTime? CreatedToUtc { get; set; }
+    /// <summary>Pola ILIKE (sudah dibungkus %…%): no. pesanan, nama, email, HP customer/penerima.</summary>
+    public string? SearchPattern { get; set; }
+    /// <summary>true = sertakan SEMUA hari dari pesanan yang cocok (untuk progres per pesanan).</summary>
+    public bool WholeOrders { get; set; }
+}
+
+/// <summary>Satu hari kirim beserta data pesanan, pelanggan, penugasan, dan pembayaran (layar admin Pesanan).</summary>
+public class AdminDayRow
+{
+    public Guid OrderDayId { get; set; }
+    public Guid OrderId { get; set; }
+    public string OrderNumber { get; set; } = string.Empty;
+    public string CustomerName { get; set; } = string.Empty;
+    public string CustomerEmail { get; set; } = string.Empty;
+    public string? CustomerPhone { get; set; }
+    public DateTime DeliveryDate { get; set; }
+    /// <summary>Urutan hari ini dalam pesanan (1-based) & jumlah hari pesanan.</summary>
+    public int DayIndex { get; set; }
+    public int DayCount { get; set; }
+    public string DayStatus { get; set; } = string.Empty;
+    public decimal DaySubtotal { get; set; }
+    public bool RequiresManualRefund { get; set; }
+    public DateTime DayUpdatedAt { get; set; }
+    public string OrderStatus { get; set; } = string.Empty;
+    public string FulfillmentType { get; set; } = string.Empty;
+    public string? AddressSnapshot { get; set; }
+    public Guid? OutletId { get; set; }
+    public string? OutletSnapshot { get; set; }
+    public string? Notes { get; set; }
+    public DateTime OrderCreatedAt { get; set; }
+    public DateTime PaymentDueAt { get; set; }
+    public DateTime? PaidAt { get; set; }
+    public decimal GrandTotal { get; set; }
+    public Guid? ZoneId { get; set; }
+    public string? ZoneName { get; set; }
+    public Guid? DriverUserId { get; set; }
+    public string? DriverName { get; set; }
+    public string? AssignmentSource { get; set; }
+    public bool PaymentNeedsReview { get; set; }
+    public string? PaymentReviewNote { get; set; }
+}
+
 /// <summary>Status ringan untuk polling halaman pembayaran (tanpa hari, item, histori).</summary>
 public class OrderPaymentStatus
 {
@@ -80,6 +133,8 @@ public interface IOrderRepository
     Task<IEnumerable<OrderItem>> GetItemsByDayIdsAsync(IReadOnlyCollection<Guid> dayIds);
     Task<IEnumerable<OrderStatusHistory>> GetHistoriesAsync(Guid orderId);
     Task<IEnumerable<OrderDayScheduleRow>> GetDaysByDeliveryDateAsync(DateTime deliveryDate, IReadOnlyCollection<string> statusCodes, string? fulfillmentType);
+    /// <summary>Baris hari kirim untuk layar admin Pesanan (filter lanjutan & hitungan dilakukan di service).</summary>
+    Task<IEnumerable<AdminDayRow>> GetAdminDayRowsAsync(AdminDayRowQuery query);
     Task<IEnumerable<Guid>> GetOverdueAwaitingPaymentIdsAsync(DateTime dueBeforeUtc, int limit);
 }
 

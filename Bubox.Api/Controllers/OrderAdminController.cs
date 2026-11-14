@@ -10,10 +10,29 @@ namespace Bubox.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class OrderAdminController(IOrderAdminService orderAdminService) : ControllerBase
+public class OrderAdminController(IOrderAdminService orderAdminService, IAdminOrderBoardService boardService) : ControllerBase
 {
     private const string Managers = $"{RoleConstants.Admin},{RoleConstants.SuperAdmin}";
     private const string Viewers = $"{RoleConstants.Admin},{RoleConstants.SuperAdmin},{RoleConstants.Owner}";
+
+    /// <summary>Layar Pesanan, tampilan per hari kirim (filter, tab status, ringkasan, rekap dapur).</summary>
+    // Kitchen & Driver juga memakai tampilan per hari kirim (dapur, persiapan, keberangkatan)
+    [Authorize(Roles = $"{Viewers},{RoleConstants.Kitchen},{RoleConstants.Driver}")]
+    [HttpGet("SearchDays")]
+    public async Task<IActionResult> SearchDays([FromQuery] AdminOrderBoardRequest request) =>
+        Ok(await boardService.SearchDaysAsync(request));
+
+    /// <summary>Layar Pesanan, tampilan per pesanan.</summary>
+    [Authorize(Roles = Viewers)]
+    [HttpGet("SearchOrders")]
+    public async Task<IActionResult> SearchOrders([FromQuery] AdminOrderBoardRequest request) =>
+        Ok(await boardService.SearchOrdersAsync(request));
+
+    /// <summary>Detail pesanan untuk panel samping: data pelanggan & penugasan pengantaran per hari.</summary>
+    [Authorize(Roles = $"{Viewers},{RoleConstants.Kitchen},{RoleConstants.Driver}")]
+    [HttpGet("GetOrderDetail")]
+    public async Task<IActionResult> GetOrderDetail([FromQuery] Guid id) =>
+        Ok(await boardService.GetOrderDetailAsync(id, User.ToOrderActor()));
 
     [Authorize(Roles = Viewers)]
     [HttpGet("GetOrders")]

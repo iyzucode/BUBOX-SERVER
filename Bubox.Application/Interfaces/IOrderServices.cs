@@ -25,6 +25,14 @@ public interface IOrderAdminService
     Task CancelOrderByAdminAsync(Guid orderId, string reason, OrderActor actor);
 }
 
+/// <summary>Layar admin Pesanan: daftar per hari kirim / per pesanan dengan filter, tab, ringkasan, & detail.</summary>
+public interface IAdminOrderBoardService
+{
+    Task<AdminBoardResult<AdminDayRowDto>> SearchDaysAsync(AdminOrderBoardRequest request);
+    Task<AdminBoardResult<AdminOrderRowDto>> SearchOrdersAsync(AdminOrderBoardRequest request);
+    Task<AdminOrderDetailDto> GetOrderDetailAsync(Guid orderId, OrderActor actor);
+}
+
 public interface IPaymentService
 {
     Task HandleMidtransNotificationAsync(string rawPayload, CancellationToken cancellationToken = default);
