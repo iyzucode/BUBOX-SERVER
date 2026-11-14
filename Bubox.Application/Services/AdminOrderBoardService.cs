@@ -123,8 +123,16 @@ public class AdminOrderBoardService(
         // Rekap dapur: seluruh hari yang lolos filter (bukan hanya tab aktif), sudah dibayar & belum batal
         var production = Production(list.Filtered.Where(r => OrderDayStatusCodes.Production.Contains(r.Row.DayStatus)));
 
+        var attentionDays = list.Filtered.Where(r => r.NeedsAttention).ToList();
+        var attention = new AdminAttentionDto(
+            Total: attentionDays.Count,
+            NeedsDriver: attentionDays.Count(r => r.NeedsDriver),
+            RefundPending: attentionDays.Count(r => r.RefundPending),
+            PaymentReview: attentionDays.Count(r => r.Row.PaymentNeedsReview),
+            Rows: attentionDays.OrderBy(r => r.Row.DeliveryDate).ThenBy(r => r.Row.OrderNumber).Take(MaxBulkItems).Select(ToDayDto).ToList());
+
         var page = listed.Skip((filter.Page - 1) * filter.PageSize).Take(filter.PageSize).Select(ToDayDto).ToList();
-        return new AdminBoardResult<AdminDayRowDto>(page, filter.Page, filter.PageSize, listed.Count, list.TabCounts, list.Facets, summary, production);
+        return new AdminBoardResult<AdminDayRowDto>(page, filter.Page, filter.PageSize, listed.Count, list.TabCounts, list.Facets, summary, production, attention);
     }
 
     // ==========================================
@@ -144,8 +152,16 @@ public class AdminOrderBoardService(
             AwaitingPayment: listed.Count(o => o.Dto.OrderStatus == OrderStatusCodes.AwaitingPayment),
             NeedsAttention: listed.Count(o => o.Dto.NeedsAttention));
 
+        var attentionOrders = list.Filtered.Where(o => o.Dto.NeedsAttention).ToList();
+        var attention = new AdminAttentionDto(
+            Total: attentionOrders.Count,
+            NeedsDriver: attentionOrders.Count(o => o.Dto.NeedsDriverDays > 0),
+            RefundPending: attentionOrders.Count(o => o.Dto.RefundPendingDays > 0),
+            PaymentReview: attentionOrders.Count(o => o.Dto.PaymentNeedsReview),
+            Rows: []);
+
         var page = listed.Skip((filter.Page - 1) * filter.PageSize).Take(filter.PageSize).Select(o => o.Dto).ToList();
-        return new AdminBoardResult<AdminOrderRowDto>(page, filter.Page, filter.PageSize, listed.Count, list.TabCounts, list.Facets, summary, []);
+        return new AdminBoardResult<AdminOrderRowDto>(page, filter.Page, filter.PageSize, listed.Count, list.TabCounts, list.Facets, summary, [], attention);
     }
 
     // ==========================================
@@ -457,7 +473,7 @@ public class AdminOrderBoardService(
         BoardFilter Filter, AdminFacetsDto Facets, List<DayContext> Filtered, Dictionary<string, int> TabCounts, List<DayContext> Listed);
 
     private sealed record OrderList(
-        BoardFilter Filter, AdminFacetsDto Facets, Dictionary<string, int> TabCounts, List<OrderAggregate> Listed);
+        BoardFilter Filter, AdminFacetsDto Facets, List<OrderAggregate> Filtered, Dictionary<string, int> TabCounts, List<OrderAggregate> Listed);
 
     private async Task<DayList> BuildDayListAsync(AdminOrderBoardRequest request)
     {
@@ -520,7 +536,7 @@ public class AdminOrderBoardService(
             _ => listed.OrderByDescending(o => o.Dto.CreatedAt).ToList()
         };
 
-        return new OrderList(filter, facets, tabCounts, listed);
+        return new OrderList(filter, facets, filtered, tabCounts, listed);
     }
 
     // ==========================================

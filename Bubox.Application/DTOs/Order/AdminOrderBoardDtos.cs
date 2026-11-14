@@ -151,7 +151,22 @@ public record AdminBoardResult<T>(
     AdminFacetsDto Facets,
     AdminBoardSummaryDto Summary,
     /// <summary>Rekap dapur per menu (tampilan per hari kirim; hari yang sudah dibayar & tidak batal).</summary>
-    IReadOnlyList<ProductionMenuSummaryDto> Production
+    IReadOnlyList<ProductionMenuSummaryDto> Production,
+    /// <summary>Rincian "Perlu Tindakan" untuk banner (setelah filter, sebelum tab).</summary>
+    AdminAttentionDto Attention
+);
+
+/// <summary>
+/// Rincian yang perlu ditindak: tanpa driver, refund tertunda, pembayaran perlu ditinjau. Satu baris bisa masuk
+/// lebih dari satu jenis. Rows = hari kirim yang perlu tindakan (tampilan per hari kirim, maks 200) agar tombol
+/// banner bisa langsung mencentangnya.
+/// </summary>
+public record AdminAttentionDto(
+    int Total,
+    int NeedsDriver,
+    int RefundPending,
+    int PaymentReview,
+    IReadOnlyList<AdminDayRowDto> Rows
 );
 
 /// <summary>Penugasan pengantaran & catatan refund satu hari kirim (panel detail admin).</summary>
