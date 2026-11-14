@@ -126,10 +126,23 @@ public static class AppSettingKeys
     public const string OrderCutoffTime = "ORDER_CUTOFF_TIME";
     public const string OrderTimezone = "ORDER_TIMEZONE";
     public const string PaymentTimeoutMinutes = "PAYMENT_TIMEOUT_MINUTES";
-    public const string DeliveryFee = "DELIVERY_FEE";
+    /// <summary>Aturan ongkir Pesan Antar (JSON, lihat FulfillmentFees).</summary>
+    public const string DeliveryFeeRule = "DELIVERY_FEE_RULE";
+    /// <summary>Aturan biaya Ambil Sendiri (JSON, lihat FulfillmentFees).</summary>
+    public const string PickupFeeRule = "PICKUP_FEE_RULE";
     public const string ServiceFeeType = "SERVICE_FEE_TYPE";
     public const string ServiceFeeValue = "SERVICE_FEE_VALUE";
     public const string TaxPercent = "TAX_PERCENT";
+}
+
+/// <summary>Cara hitung ongkir per metode pemesanan.</summary>
+public static class FulfillmentFeeModes
+{
+    public const string Free = "FREE";
+    /// <summary>Nominal tetap per pesanan.</summary>
+    public const string Fixed = "FIXED";
+    /// <summary>Jumlah hari × tarif per hari bertingkat.</summary>
+    public const string PerDay = "PER_DAY";
 }
 
 /// <summary>Jenis biaya layanan pesanan.</summary>

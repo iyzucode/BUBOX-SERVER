@@ -1,3 +1,4 @@
+using Bubox.Application.DTOs.Settings;
 using Bubox.Domain.Constants;
 
 namespace Bubox.Application.Services;
@@ -12,13 +13,18 @@ public sealed class OrderSettings
     public static readonly TimeOnly DefaultCutoffTime = new(17, 0);
     public const string DefaultTimeZone = "Asia/Jakarta";
     public const int DefaultPaymentTimeoutMinutes = 60;
-    public const decimal DefaultDeliveryFee = 0m;
 
     public int CutoffDaysBefore { get; init; } = DefaultCutoffDaysBefore;
     public TimeOnly CutoffTime { get; init; } = DefaultCutoffTime;
     public string TimeZoneId { get; init; } = DefaultTimeZone;
     public int PaymentTimeoutMinutes { get; init; } = DefaultPaymentTimeoutMinutes;
-    public decimal DeliveryFee { get; init; } = DefaultDeliveryFee;
+    /// <summary>Aturan ongkir Pesan Antar.</summary>
+    public FulfillmentFeeRuleDto DeliveryFeeRule { get; init; } = FulfillmentFees.Free;
+    /// <summary>Aturan biaya Ambil Sendiri.</summary>
+    public FulfillmentFeeRuleDto PickupFeeRule { get; init; } = FulfillmentFees.Free;
+
+    public FulfillmentFeeRuleDto GetFeeRule(string fulfillmentType) =>
+        fulfillmentType == FulfillmentTypes.Pickup ? PickupFeeRule : DeliveryFeeRule;
     /// <summary>ServiceFeeTypes.Percent / Fixed.</summary>
     public string ServiceFeeType { get; init; } = ServiceFeeTypes.Fixed;
     /// <summary>Persen (PERCENT) atau Rupiah (FIXED). 0 = tanpa biaya layanan.</summary>

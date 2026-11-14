@@ -210,7 +210,9 @@ public class OrderService(
         }
 
         var subtotal = days.Sum(d => d.DaySubtotal);
-        var deliveryFee = fulfillmentType == FulfillmentTypes.Delivery ? settings.DeliveryFee : 0m;
+        // Ongkir sesuai aturan metode pemesanan & jumlah hari kirim (lihat FulfillmentFees)
+        var feeResult = FulfillmentFees.Compute(settings.GetFeeRule(fulfillmentType), days.Count);
+        var deliveryFee = feeResult.Fee;
 
         // 4b. Voucher (opsional): syarat & potongan dicek ulang di server. Saat ini pesanan selalu QRIS.
         ResolvedVoucher? voucher = null;
@@ -235,6 +237,14 @@ public class OrderService(
             throw new InvalidOrderException("Total pesanan harus bilangan bulat Rupiah.");
         }
 
+        // 4d. Total berubah sejak customer membuka checkout (mis. admin mengubah tarif): minta konfirmasi dulu
+        if (request.ExpectedGrandTotal is { } expected && expected != grandTotal)
+        {
+            throw new OrderPriceChangedException(expected, new OrderPriceDto(
+                subtotal, discountAmount, deliveryFee, feeResult.Note, charges.ServiceFee, charges.ServiceFeePercent,
+                charges.TaxAmount, charges.TaxPercent, grandTotal));
+        }
+
         var user = await userRepository.GetByIdAsync(userId)
             ?? throw new UserNotFoundException();
 
@@ -254,6 +264,7 @@ public class OrderService(
             DiscountAmount = discountAmount,
             VoucherCode = voucher?.Voucher.Code,
             DeliveryFee = deliveryFee,
+            DeliveryFeeNote = feeResult.Note,
             ServiceFee = charges.ServiceFee,
             ServiceFeePercent = charges.ServiceFeePercent,
             TaxAmount = charges.TaxAmount,
@@ -441,7 +452,8 @@ public class OrderService(
             ServiceFee: order.ServiceFee,
             ServiceFeePercent: order.ServiceFeePercent,
             TaxAmount: order.TaxAmount,
-            TaxPercent: order.TaxPercent);
+            TaxPercent: order.TaxPercent,
+            DeliveryFeeNote: order.DeliveryFeeNote);
     }
 
     public async Task CancelOrderAsync(Guid orderId, OrderActor actor, string? reason)

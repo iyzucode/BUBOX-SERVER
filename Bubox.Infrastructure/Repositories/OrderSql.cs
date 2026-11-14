@@ -18,6 +18,7 @@ internal static class OrderSql
         o.discount_amount AS DiscountAmount,
         o.voucher_code AS VoucherCode,
         o.delivery_fee AS DeliveryFee,
+        o.delivery_fee_note AS DeliveryFeeNote,
         o.service_fee AS ServiceFee,
         o.service_fee_percent AS ServiceFeePercent,
         o.tax_amount AS TaxAmount,

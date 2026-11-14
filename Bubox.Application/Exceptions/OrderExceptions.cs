@@ -1,4 +1,28 @@
+using System.Globalization;
+using Bubox.Application.DTOs.Order;
+
 namespace Bubox.Application.Exceptions;
+
+/// <summary>Exception yang membawa data tambahan untuk client (dikirim sebagai field "data" pada respons error).</summary>
+public interface IErrorDataException
+{
+    object? ErrorData { get; }
+}
+
+/// <summary>
+/// Total yang dihitung server berbeda dengan total yang dilihat customer di checkout (mis. admin baru mengubah
+/// ongkir / biaya layanan / pajak). Pesanan TIDAK dibuat; client menampilkan rincian baru untuk dikonfirmasi.
+/// </summary>
+public class OrderPriceChangedException(decimal expectedGrandTotal, OrderPriceDto current)
+    : Exception(
+        $"Total pesanan berubah dari Rp {Rupiah(expectedGrandTotal)} menjadi Rp {Rupiah(current.GrandTotal)} karena ada pembaruan biaya. Periksa rinciannya lalu bayar lagi."),
+      IErrorDataException
+{
+    public OrderPriceDto Current { get; } = current;
+    public object? ErrorData => Current;
+
+    private static string Rupiah(decimal value) => value.ToString("N0", CultureInfo.GetCultureInfo("id-ID"));
+}
 
 public class OrderNotFoundException(string message = "Pesanan tidak ditemukan.")
     : Exception(message);

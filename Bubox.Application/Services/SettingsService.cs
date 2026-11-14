@@ -32,9 +32,8 @@ public class SettingsService(IAppSettingRepository settingRepository) : ISetting
             PaymentTimeoutMinutes = int.TryParse(Get(AppSettingKeys.PaymentTimeoutMinutes), out var timeout) && timeout > 0
                 ? timeout
                 : OrderSettings.DefaultPaymentTimeoutMinutes,
-            DeliveryFee = decimal.TryParse(Get(AppSettingKeys.DeliveryFee), NumberStyles.Number, CultureInfo.InvariantCulture, out var fee) && fee >= 0
-                ? fee
-                : OrderSettings.DefaultDeliveryFee,
+            DeliveryFeeRule = FulfillmentFees.Parse(Get(AppSettingKeys.DeliveryFeeRule)),
+            PickupFeeRule = FulfillmentFees.Parse(Get(AppSettingKeys.PickupFeeRule)),
             ServiceFeeType = ServiceFeeTypes.All.Contains(Get(AppSettingKeys.ServiceFeeType) ?? string.Empty)
                 ? Get(AppSettingKeys.ServiceFeeType)!
                 : ServiceFeeTypes.Fixed,
@@ -75,10 +74,8 @@ public class SettingsService(IAppSettingRepository settingRepository) : ISetting
             throw new InvalidSettingException("Batas waktu bayar harus antara 5 sampai 1440 menit.");
         }
 
-        if (request.DeliveryFee < 0 || request.DeliveryFee > 1_000_000 || request.DeliveryFee != decimal.Truncate(request.DeliveryFee))
-        {
-            throw new InvalidSettingException("Ongkir harus bilangan bulat Rupiah antara 0 sampai 1.000.000.");
-        }
+        var deliveryFeeRule = FulfillmentFees.Normalize(request.DeliveryFeeRule, "Pesan Antar");
+        var pickupFeeRule = FulfillmentFees.Normalize(request.PickupFeeRule, "Ambil Sendiri");
 
         var serviceFeeType = request.ServiceFeeType?.Trim().ToUpperInvariant() ?? string.Empty;
         if (!ServiceFeeTypes.All.Contains(serviceFeeType))
@@ -112,8 +109,10 @@ public class SettingsService(IAppSettingRepository settingRepository) : ISetting
                 "Zona waktu acuan cutoff dan tanggal kirim"),
             New(AppSettingKeys.PaymentTimeoutMinutes, request.PaymentTimeoutMinutes.ToString(CultureInfo.InvariantCulture), AppSettingValueTypes.Int,
                 "Batas waktu pembayaran QRIS dalam menit"),
-            New(AppSettingKeys.DeliveryFee, request.DeliveryFee.ToString("0", CultureInfo.InvariantCulture), AppSettingValueTypes.Decimal,
-                "Ongkos kirim per order (Rupiah)"),
+            New(AppSettingKeys.DeliveryFeeRule, FulfillmentFees.Serialize(deliveryFeeRule), AppSettingValueTypes.String,
+                "Aturan ongkir Pesan Antar (JSON: mode FREE/FIXED/PER_DAY, amount, tiers minDays/perDay)"),
+            New(AppSettingKeys.PickupFeeRule, FulfillmentFees.Serialize(pickupFeeRule), AppSettingValueTypes.String,
+                "Aturan biaya Ambil Sendiri (JSON: mode FREE/FIXED/PER_DAY, amount, tiers minDays/perDay)"),
             New(AppSettingKeys.ServiceFeeType, serviceFeeType, AppSettingValueTypes.String,
                 "Jenis biaya layanan: PERCENT (persen dari subtotal - diskon) atau FIXED (Rupiah per pesanan)"),
             New(AppSettingKeys.ServiceFeeValue, request.ServiceFeeValue.ToString("0.##", CultureInfo.InvariantCulture), AppSettingValueTypes.Decimal,
@@ -138,7 +137,8 @@ public class SettingsService(IAppSettingRepository settingRepository) : ISetting
             ServerTimeUtc: nowUtc,
             EarliestDeliveryDate: settings.GetEarliestDeliveryDate(nowUtc),
             LatestDeliveryDate: settings.GetLocalToday(nowUtc).AddDays(OrderLimits.MaxAdvanceDays),
-            DeliveryFee: settings.DeliveryFee,
+            DeliveryFeeRule: settings.DeliveryFeeRule,
+            PickupFeeRule: settings.PickupFeeRule,
             ServiceFeeType: settings.ServiceFeeType,
             ServiceFeeValue: settings.ServiceFeeValue,
             TaxPercent: settings.TaxPercent
@@ -150,7 +150,8 @@ public class SettingsService(IAppSettingRepository settingRepository) : ISetting
         CutoffTime: s.CutoffTime.ToString(TimeFormat, CultureInfo.InvariantCulture),
         TimeZone: s.TimeZoneId,
         PaymentTimeoutMinutes: s.PaymentTimeoutMinutes,
-        DeliveryFee: s.DeliveryFee,
+        DeliveryFeeRule: s.DeliveryFeeRule,
+        PickupFeeRule: s.PickupFeeRule,
         ServiceFeeType: s.ServiceFeeType,
         ServiceFeeValue: s.ServiceFeeValue,
         TaxPercent: s.TaxPercent,

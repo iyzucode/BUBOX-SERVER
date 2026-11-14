@@ -19,6 +19,8 @@ public class Order
     /// <summary>Kode voucher yang dipakai (snapshot), null bila tanpa voucher.</summary>
     public string? VoucherCode { get; set; }
     public decimal DeliveryFee { get; set; }
+    /// <summary>Keterangan ongkir, mis. "10 hari × Rp 1.500"; null bila gratis / nominal tetap.</summary>
+    public string? DeliveryFeeNote { get; set; }
     public decimal ServiceFee { get; set; }
     /// <summary>Tarif biaya layanan bila berupa persen (snapshot); null = nominal tetap.</summary>
     public decimal? ServiceFeePercent { get; set; }

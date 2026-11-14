@@ -1,11 +1,18 @@
 namespace Bubox.Application.DTOs.Settings;
 
+/// <summary>Satu tingkat tarif per hari: berlaku mulai <see cref="MinDays"/> hari kirim dalam satu pesanan.</summary>
+public record FeeTierDto(int MinDays, decimal PerDay);
+
+/// <summary>Aturan ongkir: Mode FREE / FIXED (Amount per pesanan) / PER_DAY (Tiers).</summary>
+public record FulfillmentFeeRuleDto(string Mode, decimal Amount, List<FeeTierDto>? Tiers);
+
 public record OrderSettingsDto(
     int CutoffDaysBefore,
     string CutoffTime,
     string TimeZone,
     int PaymentTimeoutMinutes,
-    decimal DeliveryFee,
+    FulfillmentFeeRuleDto DeliveryFeeRule,
+    FulfillmentFeeRuleDto PickupFeeRule,
     string ServiceFeeType,
     decimal ServiceFeeValue,
     decimal TaxPercent,
@@ -17,7 +24,10 @@ public record UpdateOrderSettingsRequest(
     string CutoffTime,
     string TimeZone,
     int PaymentTimeoutMinutes,
-    decimal DeliveryFee,
+    /// <summary>Aturan ongkir Pesan Antar.</summary>
+    FulfillmentFeeRuleDto DeliveryFeeRule,
+    /// <summary>Aturan biaya Ambil Sendiri.</summary>
+    FulfillmentFeeRuleDto PickupFeeRule,
     /// <summary>PERCENT atau FIXED.</summary>
     string ServiceFeeType,
     /// <summary>Persen (maks 2 desimal, 0-100) atau Rupiah bulat, sesuai ServiceFeeType.</summary>
@@ -33,8 +43,9 @@ public record OrderCutoffInfoDto(
     DateTime ServerTimeUtc,
     DateOnly EarliestDeliveryDate,
     DateOnly LatestDeliveryDate,
-    decimal DeliveryFee,
     // Untuk perkiraan total di checkout (server tetap menghitung ulang)
+    FulfillmentFeeRuleDto DeliveryFeeRule,
+    FulfillmentFeeRuleDto PickupFeeRule,
     string ServiceFeeType,
     decimal ServiceFeeValue,
     decimal TaxPercent

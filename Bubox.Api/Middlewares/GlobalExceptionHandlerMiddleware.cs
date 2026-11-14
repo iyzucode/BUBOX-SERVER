@@ -18,6 +18,9 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
         }
     }
 
+    // camelCase agar field "data" konsisten dengan respons API lain
+    private static readonly JsonSerializerOptions ResponseJsonOptions = new(JsonSerializerDefaults.Web);
+
     private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";
@@ -47,6 +50,7 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
             OrderNotFoundException ex => (StatusCodes.Status404NotFound, "ORDER_NOT_FOUND", ex.Message),
             InvalidOrderException ex => (StatusCodes.Status400BadRequest, "INVALID_ORDER", ex.Message),
             OrderCutoffPassedException ex => (StatusCodes.Status400BadRequest, "ORDER_CUTOFF_PASSED", ex.Message),
+            OrderPriceChangedException ex => (StatusCodes.Status409Conflict, "PRICE_CHANGED", ex.Message),
             InvalidStatusTransitionException ex => (StatusCodes.Status409Conflict, "INVALID_STATUS_TRANSITION", ex.Message),
             ForbiddenStatusTransitionException ex => (StatusCodes.Status403Forbidden, "FORBIDDEN_STATUS_TRANSITION", ex.Message),
             OrderConcurrencyException ex => (StatusCodes.Status409Conflict, "ORDER_CONCURRENCY_CONFLICT", ex.Message),
@@ -79,9 +83,11 @@ public class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<Glob
             statusCode,
             errorCode,
             message,
-            detail = exception.Message
+            detail = exception.Message,
+            // Data tambahan (mis. rincian harga terbaru untuk PRICE_CHANGED); null untuk error lain
+            data = (exception as IErrorDataException)?.ErrorData
         };
 
-        await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        await context.Response.WriteAsync(JsonSerializer.Serialize(response, ResponseJsonOptions));
     }
 }

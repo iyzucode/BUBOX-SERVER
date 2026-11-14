@@ -12,7 +12,23 @@ public record CreateOrderRequest(
     // Opsional. Diskon dihitung ulang di server; nilai dari client tidak dipakai.
     string? VoucherCode = null,
     // Wajib untuk PICKUP: outlet tempat ambil (harus aktif)
-    Guid? OutletId = null
+    Guid? OutletId = null,
+    // Opsional: total yang dilihat customer. Bila berbeda dengan hitungan server, pesanan ditolak dengan
+    // PRICE_CHANGED beserta rincian terbaru agar customer mengonfirmasi dulu.
+    decimal? ExpectedGrandTotal = null
+);
+
+/// <summary>Rincian harga pesanan menurut pengaturan terkini (dikirim bersama PRICE_CHANGED).</summary>
+public record OrderPriceDto(
+    decimal Subtotal,
+    decimal DiscountAmount,
+    decimal DeliveryFee,
+    string? DeliveryFeeNote,
+    decimal ServiceFee,
+    decimal? ServiceFeePercent,
+    decimal TaxAmount,
+    decimal TaxPercent,
+    decimal GrandTotal
 );
 
 public record CreateOrderDayRequest(
@@ -183,7 +199,9 @@ public record OrderDetailDto(
     decimal ServiceFee = 0,
     decimal? ServiceFeePercent = null,
     decimal TaxAmount = 0,
-    decimal TaxPercent = 0
+    decimal TaxPercent = 0,
+    // Keterangan ongkir, mis. "10 hari × Rp 1.500" (null bila gratis / nominal tetap / pesanan lama)
+    string? DeliveryFeeNote = null
 );
 
 public record ProductionMenuSummaryDto(
