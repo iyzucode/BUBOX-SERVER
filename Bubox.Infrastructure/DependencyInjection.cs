@@ -63,6 +63,7 @@ public static class DependencyInjection
         services.AddScoped<IVoucherRepository, VoucherRepository>();
         services.AddScoped<IDeliveryRepository, DeliveryRepository>();
         services.AddScoped<IOutletRepository, OutletRepository>();
+        services.AddScoped<IKitchenRepository, KitchenRepository>();
 
         // HttpClient tunggal yang berumur panjang; koneksi di-refresh berkala agar perubahan DNS terbaca
         services.AddSingleton<IPaymentGateway>(sp => new MidtransPaymentGateway(

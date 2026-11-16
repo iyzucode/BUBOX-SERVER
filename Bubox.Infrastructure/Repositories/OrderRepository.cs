@@ -194,6 +194,7 @@ public class OrderRepository(IDbConnectionFactory connectionFactory) : IOrderRep
                 d.day_subtotal AS DaySubtotal,
                 d.requires_manual_refund AS RequiresManualRefund,
                 d.updated_at AS DayUpdatedAt,
+                d.cancelled_at AS DayCancelledAt,
                 o.status_code AS OrderStatus,
                 o.fulfillment_type AS FulfillmentType,
                 o.address_snapshot::text AS AddressSnapshot,

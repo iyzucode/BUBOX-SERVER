@@ -92,6 +92,7 @@ public class AdminDayRow
     public decimal DaySubtotal { get; set; }
     public bool RequiresManualRefund { get; set; }
     public DateTime DayUpdatedAt { get; set; }
+    public DateTime? DayCancelledAt { get; set; }
     public string OrderStatus { get; set; } = string.Empty;
     public string FulfillmentType { get; set; } = string.Empty;
     public string? AddressSnapshot { get; set; }

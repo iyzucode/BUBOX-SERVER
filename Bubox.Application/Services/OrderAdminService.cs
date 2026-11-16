@@ -119,6 +119,36 @@ public class OrderAdminService(
         await uow.CommitAsync();
     }
 
+    public async Task MarkDayReadyAsync(Guid orderDayId, OrderActor actor)
+    {
+        var nowUtc = DateTime.UtcNow;
+        var dayRef = await orderRepository.GetDayByIdAsync(orderDayId)
+            ?? throw new OrderNotFoundException("Hari kirim tidak ditemukan.");
+
+        await using var uow = await unitOfWorkFactory.BeginAsync();
+        var order = await uow.LockOrderAsync(dayRef.OrderId)
+            ?? throw new OrderNotFoundException();
+        var days = await uow.GetDaysAsync(order.Id);
+        var day = days.First(d => d.Id == orderDayId);
+
+        // Sudah siap atau lebih lanjut (berangkat / diterima / diambil): tidak ada yang perlu diubah
+        if (day.StatusCode is OrderDayStatusCodes.Ready or OrderDayStatusCodes.OutForDelivery
+            or OrderDayStatusCodes.Delivered or OrderDayStatusCodes.PickedUp)
+        {
+            return;
+        }
+
+        if (day.StatusCode == OrderDayStatusCodes.Confirmed)
+        {
+            await statusEngine.ChangeDayStatusAsync(uow, day, OrderDayStatusCodes.Preparing, actor, null, nowUtc);
+        }
+        // Status lain (belum dibayar / batal) ditolak state machine dengan pesan yang jelas
+        await statusEngine.ChangeDayStatusAsync(uow, day, OrderDayStatusCodes.Ready, actor, null, nowUtc);
+
+        await statusEngine.SyncOrderWithDaysAsync(uow, order, days, actor.UserId, nowUtc);
+        await uow.CommitAsync();
+    }
+
     public async Task CancelDayByAdminAsync(Guid orderDayId, string reason, OrderActor actor)
     {
         var cleanReason = RequireReason(reason);

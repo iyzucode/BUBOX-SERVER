@@ -21,6 +21,8 @@ public interface IOrderAdminService
     Task<DailyProductionDto> GetDailyProductionAsync(DateOnly date);
     Task<DailyDeliveriesDto> GetDailyDeliveriesAsync(DateOnly date);
     Task UpdateDayStatusAsync(Guid orderDayId, string statusCode, OrderActor actor);
+    /// <summary>Dapur: hari kirim langsung jadi READY (CONFIRMED → PREPARING → READY). Yang sudah READY+ dilewati.</summary>
+    Task MarkDayReadyAsync(Guid orderDayId, OrderActor actor);
     Task CancelDayByAdminAsync(Guid orderDayId, string reason, OrderActor actor);
     Task CancelOrderByAdminAsync(Guid orderId, string reason, OrderActor actor);
 }
