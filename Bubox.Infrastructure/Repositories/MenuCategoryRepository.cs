@@ -63,6 +63,13 @@ public class MenuCategoryRepository(IDbConnectionFactory connectionFactory) : IM
         return await connection.QuerySingleOrDefaultAsync<MenuCategory>(sql, new { Code = code });
     }
 
+    public async Task<bool> CodeExistsAsync(string code)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = "SELECT EXISTS (SELECT 1 FROM rf_menu_categories WHERE code = @Code);";
+        return await connection.ExecuteScalarAsync<bool>(sql, new { Code = code });
+    }
+
     public async Task<bool> HasActiveMenusAsync(Guid categoryId)
     {
         using var connection = connectionFactory.CreateConnection();

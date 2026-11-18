@@ -12,7 +12,8 @@ public record MenuCategoryDto(
 );
 
 public record CreateMenuCategoryRequest(
-    string Code,
+    /// <summary>Kosong = dibuat otomatis dari nama.</summary>
+    string? Code,
     string Name,
     string CategoryType,
     int DisplayOrder = 1,

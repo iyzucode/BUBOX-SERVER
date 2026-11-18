@@ -1,6 +1,8 @@
 using Bubox.Application.DTOs.MenuCategory;
 using Bubox.Application.Exceptions;
 using Bubox.Application.Interfaces;
+using Bubox.Domain.Constants;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bubox.Api.Controllers;
@@ -9,6 +11,8 @@ namespace Bubox.Api.Controllers;
 [Route("api/[controller]")]
 public class MenuCategoryController(IMenuCategoryService categoryService) : ControllerBase
 {
+    private const string Managers = $"{RoleConstants.Admin},{RoleConstants.SuperAdmin}";
+
     [HttpGet("GetCategories")]
     public async Task<IActionResult> GetCategories([FromQuery] string? categoryType, [FromQuery] bool includeInactive = false)
     {
@@ -40,6 +44,7 @@ public class MenuCategoryController(IMenuCategoryService categoryService) : Cont
         return Ok(category);
     }
 
+    [Authorize(Roles = Managers)]
     [HttpPost("CreateCategory")]
     public async Task<IActionResult> CreateCategory([FromBody] CreateMenuCategoryRequest request)
     {
@@ -58,6 +63,7 @@ public class MenuCategoryController(IMenuCategoryService categoryService) : Cont
         }
     }
 
+    [Authorize(Roles = Managers)]
     [HttpPut("UpdateCategory")]
     public async Task<IActionResult> UpdateCategory([FromQuery] Guid id, [FromBody] UpdateMenuCategoryRequest request)
     {
@@ -85,6 +91,7 @@ public class MenuCategoryController(IMenuCategoryService categoryService) : Cont
         }
     }
 
+    [Authorize(Roles = Managers)]
     [HttpDelete("DeleteCategory")]
     public async Task<IActionResult> DeleteCategory([FromQuery] Guid id)
     {
