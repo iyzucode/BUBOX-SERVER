@@ -105,7 +105,7 @@ public partial class DeliveryAdminService(
             c => string.Join(" › ", AncestorsOf(c).Where(names.ContainsKey).Select(a => names[a])));
     }
 
-    /// <summary>Hitung aturan sendiri & aturan efektif (dari induk) untuk sekumpulan wilayah bersaudara.</summary>
+    /// <summary>Hitung status efektif & pengecualian di bawahnya untuk sekumpulan wilayah bersaudara.</summary>
     private async Task<List<AreaNodeDto>> BuildNodesAsync(IReadOnlyList<WilayahNode> nodes, IReadOnlyList<string> sharedAncestors)
     {
         if (nodes.Count == 0) return [];
@@ -116,6 +116,9 @@ public partial class DeliveryAdminService(
         var coverage = (await deliveryRepository.GetCoverageRulesAsync(lookup)).ToDictionary(r => r.WilayahCode);
         var zones = (await deliveryRepository.GetZoneAreaRulesAsync(lookup)).ToDictionary(r => r.WilayahCode);
         var below = (await deliveryRepository.CountDescendantRulesAsync(codes)).ToDictionary(r => r.Code);
+        var zonesBelow = (await deliveryRepository.CountDescendantZonesAsync(codes))
+            .GroupBy(r => r.Code)
+            .ToDictionary(g => g.Key, g => g.Select(r => new AreaZoneRuleCountDto(r.ZoneId, r.Rules)).ToList());
         var drivers = (await deliveryRepository.GetZonesAsync()).ToDictionary(z => z.Id, z => z.DriverName);
 
         // Nama untuk sumber aturan (induk)
@@ -134,9 +137,11 @@ public partial class DeliveryAdminService(
             var zoneSource = chain.FirstOrDefault(zones.ContainsKey);
 
             var isCovered = coverageSource != null && coverage[coverageSource].IsCovered;
-            var zone = zoneSource != null ? zones[zoneSource] : null;
-            var driverName = zone != null && drivers.TryGetValue(zone.ZoneId, out var d) ? d : null;
+            // Aturan "Tanpa zona" (ZoneId null) sama artinya dengan tidak punya zona
+            var zone = zoneSource != null && zones[zoneSource].ZoneId != null ? zones[zoneSource] : null;
+            var driverName = zone?.ZoneId is { } zoneId && drivers.TryGetValue(zoneId, out var d) ? d : null;
             below.TryGetValue(n.Code, out var counts);
+            var zoneCounts = zonesBelow.GetValueOrDefault(n.Code) ?? [];
 
             string? warning = null;
             if (isCovered && zone == null) warning = "Terjangkau tapi belum masuk zona: pesanan akan masuk antrean tanpa driver.";
@@ -159,8 +164,11 @@ public partial class DeliveryAdminService(
                 ZoneSourceCode: zoneSource,
                 ZoneSourceName: zoneSource != null && names.TryGetValue(zoneSource, out var zs) ? zs : null,
                 DriverName: driverName,
-                CoverageRulesBelow: counts?.CoverageRules ?? 0,
-                ZoneRulesBelow: counts?.ZoneRules ?? 0,
+                CoverageRulesBelow: isCovered ? counts?.ExcludedRules ?? 0 : counts?.CoveredRules ?? 0,
+                ZoneRulesBelow: zoneCounts.Where(c => c.ZoneId != zone?.ZoneId).Sum(c => c.Count),
+                CoveredRulesBelow: counts?.CoveredRules ?? 0,
+                ExcludedRulesBelow: counts?.ExcludedRules ?? 0,
+                ZoneRulesBelowByZone: zoneCounts,
                 Warning: warning);
         }).ToList();
     }
@@ -176,7 +184,12 @@ public partial class DeliveryAdminService(
     {
         var code = RequireWilayahCode(request.WilayahCode);
         _ = await deliveryRepository.GetWilayahAsync(code) ?? throw new InvalidDeliverySettingException("Wilayah tidak ditemukan.");
-        await deliveryRepository.SetCoverageAsync(code, request.IsCovered, adminId, DateTime.UtcNow);
+        if (request.IsCovered is not { } isCovered)
+        {
+            throw new InvalidDeliverySettingException("Pilih Terjangkau atau Tidak.");
+        }
+
+        await deliveryRepository.SetCoverageAsync(code, isCovered, adminId, DateTime.UtcNow);
         return await GetNodeAsync(code);
     }
 

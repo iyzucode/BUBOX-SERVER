@@ -17,6 +17,9 @@ public class DeliveryRepository(IDbConnectionFactory connectionFactory) : IDeliv
         return lengths.Where(l => l <= code.Length).Select(l => code[..l]).Distinct().ToArray();
     }
 
+    /// <summary>Induk-induk sebuah kode, tanpa kode itu sendiri.</summary>
+    private static string[] AncestorsOf(string code) => SelfAndAncestors(code).Where(c => c != code).ToArray();
+
     /// <summary>Panjang kode anak langsung dari sebuah induk (provinsi → kab/kota → kecamatan → kelurahan).</summary>
     private static int ChildLength(string? parentCode) => parentCode?.Length switch
     {
@@ -129,9 +132,9 @@ public class DeliveryRepository(IDbConnectionFactory connectionFactory) : IDeliv
         if (codes.Count == 0) return [];
         using var connection = connectionFactory.CreateConnection();
         const string sql = """
-            SELECT za.wilayah_code AS WilayahCode, za.zone_id AS ZoneId, z.name AS ZoneName, z.is_active AS ZoneIsActive
+            SELECT za.wilayah_code AS WilayahCode, za.zone_id AS ZoneId, z.name AS ZoneName, COALESCE(z.is_active, FALSE) AS ZoneIsActive
             FROM delivery_zone_areas za
-            JOIN delivery_zones z ON z.id = za.zone_id
+            LEFT JOIN delivery_zones z ON z.id = za.zone_id
             WHERE za.wilayah_code = ANY(@Codes);
             """;
         return await connection.QueryAsync<ZoneAreaRule>(sql, new { Codes = codes.ToArray() });
@@ -143,47 +146,94 @@ public class DeliveryRepository(IDbConnectionFactory connectionFactory) : IDeliv
         using var connection = connectionFactory.CreateConnection();
         const string sql = """
             SELECT c.code AS Code,
-                   (SELECT COUNT(*)::int FROM delivery_coverage_areas ca WHERE ca.wilayah_code LIKE c.code || '.%') AS CoverageRules,
-                   (SELECT COUNT(*)::int FROM delivery_zone_areas za WHERE za.wilayah_code LIKE c.code || '.%') AS ZoneRules
+                   (SELECT COUNT(*)::int FROM delivery_coverage_areas ca WHERE ca.wilayah_code LIKE c.code || '.%' AND ca.is_covered) AS CoveredRules,
+                   (SELECT COUNT(*)::int FROM delivery_coverage_areas ca WHERE ca.wilayah_code LIKE c.code || '.%' AND NOT ca.is_covered) AS ExcludedRules
             FROM UNNEST(@Codes::text[]) AS c(code);
             """;
         return await connection.QueryAsync<DescendantRuleCount>(sql, new { Codes = codes.ToArray() });
     }
 
-    public async Task SetCoverageAsync(string wilayahCode, bool? isCovered, Guid updatedBy, DateTime nowUtc)
+    public async Task<IEnumerable<DescendantZoneCount>> CountDescendantZonesAsync(IReadOnlyCollection<string> codes)
     {
+        if (codes.Count == 0) return [];
         using var connection = connectionFactory.CreateConnection();
-        if (isCovered is null)
+        const string sql = """
+            SELECT c.code AS Code, za.zone_id AS ZoneId, COUNT(*)::int AS Rules
+            FROM UNNEST(@Codes::text[]) AS c(code)
+            JOIN delivery_zone_areas za ON za.wilayah_code LIKE c.code || '.%'
+            GROUP BY c.code, za.zone_id;
+            """;
+        return await connection.QueryAsync<DescendantZoneCount>(sql, new { Codes = codes.ToArray() });
+    }
+
+    public async Task SetCoverageAsync(string wilayahCode, bool isCovered, Guid updatedBy, DateTime nowUtc)
+    {
+        await using var scope = await BeginAsync();
+        var (connection, transaction) = scope;
+
+        // Pilihan ini berlaku ke seluruh wilayah di bawahnya
+        await connection.ExecuteAsync(
+            "DELETE FROM delivery_coverage_areas WHERE wilayah_code LIKE @Below;", new { Below = wilayahCode + ".%" }, transaction);
+
+        // Aturan hanya disimpan bila berbeda dari induknya (tanpa aturan sama sekali = tidak terjangkau)
+        var parentCovered = await connection.QuerySingleOrDefaultAsync<bool?>("""
+            SELECT is_covered FROM delivery_coverage_areas
+            WHERE wilayah_code = ANY(@Codes)
+            ORDER BY LENGTH(wilayah_code) DESC
+            LIMIT 1;
+            """, new { Codes = AncestorsOf(wilayahCode) }, transaction) ?? false;
+
+        if (parentCovered == isCovered)
         {
-            await connection.ExecuteAsync("DELETE FROM delivery_coverage_areas WHERE wilayah_code = @Code;", new { Code = wilayahCode });
-            return;
+            await connection.ExecuteAsync(
+                "DELETE FROM delivery_coverage_areas WHERE wilayah_code = @Code;", new { Code = wilayahCode }, transaction);
+        }
+        else
+        {
+            await connection.ExecuteAsync("""
+                INSERT INTO delivery_coverage_areas (wilayah_code, is_covered, updated_by, updated_at)
+                VALUES (@Code, @IsCovered, @By, @Now)
+                ON CONFLICT (wilayah_code) DO UPDATE
+                SET is_covered = EXCLUDED.is_covered, updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at;
+                """, new { Code = wilayahCode, IsCovered = isCovered, By = updatedBy, Now = nowUtc }, transaction);
         }
 
-        const string sql = """
-            INSERT INTO delivery_coverage_areas (wilayah_code, is_covered, updated_by, updated_at)
-            VALUES (@Code, @IsCovered, @By, @Now)
-            ON CONFLICT (wilayah_code) DO UPDATE
-            SET is_covered = EXCLUDED.is_covered, updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at;
-            """;
-        await connection.ExecuteAsync(sql, new { Code = wilayahCode, IsCovered = isCovered.Value, By = updatedBy, Now = nowUtc });
+        await scope.CommitAsync();
     }
 
     public async Task SetZoneAreaAsync(string wilayahCode, Guid? zoneId, Guid updatedBy, DateTime nowUtc)
     {
-        using var connection = connectionFactory.CreateConnection();
-        if (zoneId is null)
+        await using var scope = await BeginAsync();
+        var (connection, transaction) = scope;
+
+        // Pilihan ini berlaku ke seluruh wilayah di bawahnya
+        await connection.ExecuteAsync(
+            "DELETE FROM delivery_zone_areas WHERE wilayah_code LIKE @Below;", new { Below = wilayahCode + ".%" }, transaction);
+
+        // Pemetaan hanya disimpan bila berbeda dari induknya (tanpa pemetaan sama sekali = tanpa zona)
+        var parentZone = await connection.QuerySingleOrDefaultAsync<Guid?>("""
+            SELECT zone_id FROM delivery_zone_areas
+            WHERE wilayah_code = ANY(@Codes)
+            ORDER BY LENGTH(wilayah_code) DESC
+            LIMIT 1;
+            """, new { Codes = AncestorsOf(wilayahCode) }, transaction);
+
+        if (parentZone == zoneId)
         {
-            await connection.ExecuteAsync("DELETE FROM delivery_zone_areas WHERE wilayah_code = @Code;", new { Code = wilayahCode });
-            return;
+            await connection.ExecuteAsync(
+                "DELETE FROM delivery_zone_areas WHERE wilayah_code = @Code;", new { Code = wilayahCode }, transaction);
+        }
+        else
+        {
+            await connection.ExecuteAsync("""
+                INSERT INTO delivery_zone_areas (wilayah_code, zone_id, updated_by, updated_at)
+                VALUES (@Code, @ZoneId, @By, @Now)
+                ON CONFLICT (wilayah_code) DO UPDATE
+                SET zone_id = EXCLUDED.zone_id, updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at;
+                """, new { Code = wilayahCode, ZoneId = zoneId, By = updatedBy, Now = nowUtc }, transaction);
         }
 
-        const string sql = """
-            INSERT INTO delivery_zone_areas (wilayah_code, zone_id, updated_by, updated_at)
-            VALUES (@Code, @ZoneId, @By, @Now)
-            ON CONFLICT (wilayah_code) DO UPDATE
-            SET zone_id = EXCLUDED.zone_id, updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at;
-            """;
-        await connection.ExecuteAsync(sql, new { Code = wilayahCode, ZoneId = zoneId.Value, By = updatedBy, Now = nowUtc });
+        await scope.CommitAsync();
     }
 
     // ==========================================

@@ -24,12 +24,12 @@ public class DeliveryAdminController(IDeliveryAdminService service) : Controller
     public async Task<IActionResult> SearchWilayah([FromQuery] string q) =>
         Ok(await service.SearchWilayahAsync(q));
 
-    /// <summary>isCovered true/false = aturan sendiri; null = hapus aturan (ikut induk).</summary>
+    /// <summary>Terapkan jangkauan ke wilayah ini dan semua wilayah di bawahnya.</summary>
     [HttpPut("SetCoverage")]
     public async Task<IActionResult> SetCoverage([FromBody] SetCoverageRequest request) =>
         Ok(await service.SetCoverageAsync(request, User.GetUserId()));
 
-    /// <summary>zoneId = petakan ke zona; null = hapus pemetaan (ikut induk).</summary>
+    /// <summary>Terapkan zona ke wilayah ini dan semua wilayah di bawahnya; zoneId null = tanpa zona.</summary>
     [HttpPut("SetZoneArea")]
     public async Task<IActionResult> SetZoneArea([FromBody] SetZoneAreaRequest request) =>
         Ok(await service.SetZoneAreaAsync(request, User.GetUserId()));

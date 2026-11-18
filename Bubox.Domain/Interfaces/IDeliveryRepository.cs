@@ -5,7 +5,7 @@ namespace Bubox.Domain.Interfaces;
 /// <summary>
 /// Area pengantaran, zona, dan driver. Untuk satu kode wilayah, aturan yang berlaku adalah yang
 /// paling spesifik di antara kode itu dan induk-induknya (provinsi 2, kab/kota 5, kecamatan 8,
-/// kelurahan 13 karakter).
+/// kelurahan 13 karakter). Aturan hanya disimpan bila berbeda dari induknya.
 /// </summary>
 public interface IDeliveryRepository
 {
@@ -30,13 +30,19 @@ public interface IDeliveryRepository
     /// <summary>Pemetaan zona yang tersimpan tepat untuk kode-kode ini.</summary>
     Task<IEnumerable<ZoneAreaRule>> GetZoneAreaRulesAsync(IReadOnlyCollection<string> codes);
 
-    /// <summary>Jumlah aturan cakupan & zona di bawah tiap kode (keturunan, tidak termasuk kode itu sendiri).</summary>
+    /// <summary>Jumlah aturan cakupan di bawah tiap kode (keturunan, tidak termasuk kode itu sendiri).</summary>
     Task<IEnumerable<DescendantRuleCount>> CountDescendantRulesAsync(IReadOnlyCollection<string> codes);
 
-    /// <summary>Simpan aturan cakupan; <paramref name="isCovered"/> null = hapus aturan (ikut induk).</summary>
-    Task SetCoverageAsync(string wilayahCode, bool? isCovered, Guid updatedBy, DateTime nowUtc);
+    /// <summary>Jumlah pemetaan zona di bawah tiap kode, dikelompokkan per zona.</summary>
+    Task<IEnumerable<DescendantZoneCount>> CountDescendantZonesAsync(IReadOnlyCollection<string> codes);
 
-    /// <summary>Petakan wilayah ke zona; <paramref name="zoneId"/> null = hapus pemetaan (ikut induk).</summary>
+    /// <summary>Terapkan jangkauan ke wilayah ini dan semua wilayah di bawahnya (aturan di bawahnya ditimpa).</summary>
+    Task SetCoverageAsync(string wilayahCode, bool isCovered, Guid updatedBy, DateTime nowUtc);
+
+    /// <summary>
+    /// Terapkan zona ke wilayah ini dan semua wilayah di bawahnya (pemetaan di bawahnya ditimpa).
+    /// <paramref name="zoneId"/> null = tanpa zona.
+    /// </summary>
     Task SetZoneAreaAsync(string wilayahCode, Guid? zoneId, Guid updatedBy, DateTime nowUtc);
 
     // ---- Zona ----

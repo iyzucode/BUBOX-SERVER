@@ -1,7 +1,7 @@
 namespace Bubox.Application.DTOs.Delivery;
 
 /// <summary>
-/// Satu wilayah di pohon admin, lengkap dengan aturan sendiri & aturan efektif (turunan dari induk).
+/// Satu wilayah di pohon admin, lengkap dengan status efektifnya.
 /// Level: 1 provinsi, 2 kab/kota, 3 kecamatan, 4 kelurahan/desa.
 /// </summary>
 public record AreaNodeDto(
@@ -9,16 +9,16 @@ public record AreaNodeDto(
     string Name,
     int Level,
     bool HasChildren,
-    // Aturan cakupan yang disimpan tepat di wilayah ini (null = ikut induk)
+    // Aturan cakupan yang tersimpan tepat di wilayah ini (null = sama dengan induknya)
     bool? CoverageRule,
     // Hasil akhir: terjangkau atau tidak (tanpa aturan sama sekali = tidak terjangkau)
     bool IsCovered,
     // Wilayah asal aturan cakupan efektif (null bila tidak ada aturan)
     string? CoverageSourceCode,
     string? CoverageSourceName,
-    // Zona yang dipetakan tepat di wilayah ini (null = ikut induk)
+    // Zona yang tersimpan tepat di wilayah ini (null = sama dengan induknya, atau tanpa zona)
     Guid? ZoneRuleId,
-    // Zona efektif (aturan paling spesifik; zona nonaktif tetap ditampilkan agar terlihat)
+    // Zona efektif (aturan paling spesifik; null = tanpa zona; zona nonaktif tetap ditampilkan agar terlihat)
     Guid? ZoneId,
     string? ZoneName,
     bool ZoneIsActive,
@@ -26,12 +26,19 @@ public record AreaNodeDto(
     string? ZoneSourceName,
     // Driver aktif zona efektif
     string? DriverName,
-    // Jumlah aturan di bawah wilayah ini (pengecualian di level lebih rendah)
+    // Jumlah wilayah di bawahnya yang berbeda dari status wilayah ini (pengecualian)
     int CoverageRulesBelow,
     int ZoneRulesBelow,
+    // Rincian aturan di bawahnya, untuk menghitung yang akan tertimpa oleh pilihan baru
+    int CoveredRulesBelow,
+    int ExcludedRulesBelow,
+    IReadOnlyList<AreaZoneRuleCountDto> ZoneRulesBelowByZone,
     // Peringatan: terjangkau tapi tidak ada zona aktif / zona tanpa driver
     string? Warning
 );
+
+/// <summary>Jumlah pemetaan zona di wilayah bawahan, per zona. ZoneId null = tanpa zona.</summary>
+public record AreaZoneRuleCountDto(Guid? ZoneId, int Count);
 
 public record AreaChildrenDto(
     AreaNodeDto? Parent,

@@ -16,12 +16,12 @@ public class CoverageRule
     public bool IsCovered { get; set; }
 }
 
-/// <summary>Pemetaan wilayah → zona (delivery_zone_areas) beserta info zonanya.</summary>
+/// <summary>Pemetaan wilayah → zona (delivery_zone_areas) beserta info zonanya. ZoneId null = "Tanpa zona".</summary>
 public class ZoneAreaRule
 {
     public string WilayahCode { get; set; } = string.Empty;
-    public Guid ZoneId { get; set; }
-    public string ZoneName { get; set; } = string.Empty;
+    public Guid? ZoneId { get; set; }
+    public string? ZoneName { get; set; }
     public bool ZoneIsActive { get; set; }
 }
 
@@ -29,8 +29,16 @@ public class ZoneAreaRule
 public class DescendantRuleCount
 {
     public string Code { get; set; } = string.Empty;
-    public int CoverageRules { get; set; }
-    public int ZoneRules { get; set; }
+    public int CoveredRules { get; set; }
+    public int ExcludedRules { get; set; }
+}
+
+/// <summary>Jumlah pemetaan zona di bawah (keturunan) satu wilayah, per zona. ZoneId null = "Tanpa zona".</summary>
+public class DescendantZoneCount
+{
+    public string Code { get; set; } = string.Empty;
+    public Guid? ZoneId { get; set; }
+    public int Rules { get; set; }
 }
 
 /// <summary>Zona pengantaran ("driver wilayah").</summary>
