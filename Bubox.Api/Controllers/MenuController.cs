@@ -1,6 +1,7 @@
 using Bubox.Application.DTOs.Menu;
 using Bubox.Application.Exceptions;
 using Bubox.Application.Interfaces;
+using Bubox.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,6 +11,9 @@ namespace Bubox.Api.Controllers;
 [Route("api/[controller]")]
 public class MenuController(IMenuService menuService) : ControllerBase
 {
+    // Melihat menu terbuka untuk pelanggan; mengubah katalog & jadwal hanya untuk admin
+    private const string Managers = $"{RoleConstants.Admin},{RoleConstants.SuperAdmin}";
+
     // ==========================================
     // 1. JADWAL MINGGUAN & HARIAN (PUBLIK & PEMESANAN)
     // ==========================================
@@ -96,6 +100,7 @@ public class MenuController(IMenuService menuService) : ControllerBase
         return Ok(menu);
     }
 
+    [Authorize(Roles = Managers)]
     [HttpPost("CreateMasterMenu")]
     public async Task<IActionResult> CreateMasterMenu([FromBody] CreateMasterMenuRequest request)
     {
@@ -114,6 +119,7 @@ public class MenuController(IMenuService menuService) : ControllerBase
         }
     }
 
+    [Authorize(Roles = Managers)]
     [HttpPut("UpdateMasterMenu")]
     public async Task<IActionResult> UpdateMasterMenu([FromQuery] Guid id, [FromBody] UpdateMasterMenuRequest request)
     {
@@ -141,6 +147,7 @@ public class MenuController(IMenuService menuService) : ControllerBase
         }
     }
 
+    [Authorize(Roles = Managers)]
     [HttpDelete("DeleteMasterMenu")]
     public async Task<IActionResult> DeleteMasterMenu([FromQuery] Guid id)
     {
@@ -168,6 +175,7 @@ public class MenuController(IMenuService menuService) : ControllerBase
         }
     }
 
+    [Authorize(Roles = Managers)]
     [HttpPut("ToggleMenuStatus")]
     public async Task<IActionResult> ToggleMenuStatus([FromQuery] Guid id, [FromQuery] bool isActive)
     {
@@ -195,6 +203,7 @@ public class MenuController(IMenuService menuService) : ControllerBase
     // 3. PENUGASAN JADWAL HARIAN (ASSIGNMENTS)
     // ==========================================
 
+    [Authorize(Roles = Managers)]
     [HttpPost("AssignMenuToDay")]
     public async Task<IActionResult> AssignMenuToDay([FromBody] AssignMenuRequest request)
     {
@@ -217,6 +226,7 @@ public class MenuController(IMenuService menuService) : ControllerBase
         }
     }
 
+    [Authorize(Roles = Managers)]
     [HttpPost("BatchAssignMenusToDay")]
     public async Task<IActionResult> BatchAssignMenusToDay([FromBody] BatchAssignMenusRequest request)
     {
@@ -235,6 +245,7 @@ public class MenuController(IMenuService menuService) : ControllerBase
         }
     }
 
+    [Authorize(Roles = Managers)]
     [HttpDelete("RemoveMenuFromDay")]
     public async Task<IActionResult> RemoveMenuFromDay([FromQuery] Guid assignmentId)
     {
@@ -254,6 +265,7 @@ public class MenuController(IMenuService menuService) : ControllerBase
         }
     }
 
+    [Authorize(Roles = Managers)]
     [HttpDelete("RemoveMenuFromDayByDay")]
     public async Task<IActionResult> RemoveMenuFromDayByDay([FromQuery] Guid menuId, [FromQuery] int dayOfWeek)
     {
